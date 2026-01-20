@@ -8,7 +8,7 @@
     <a href="https://hellogithub.com/repository/e73a691ffcfa4d0e92a05912fe8c0b46"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=e73a691ffcfa4d0e92a05912fe8c0b46&claim_uid=OCYdts5lPczHag4&theme=small" alt="Featured｜HelloGitHub" /></a>
 </p>
 
-## 我的文字修仙全靠刷
+## 我的文字修仙全靠刷-二开-接入AI
 
 - 项目框架 [Vue.js](https://cn.vuejs.org)
 - 项目 UI [Element Plus](https://element-plus.org/zh-CN)
