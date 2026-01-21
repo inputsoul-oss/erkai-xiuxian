@@ -74,6 +74,13 @@ export const useMainStore = defineStore('main', {
       sellingEquipmentData: [],
       highestTowerFloor: 1,
       rewardedTowerFloors: [],
+      autoExplore: {
+        enabled: false,
+        target: 0,
+        defeated: 0,
+        autoStartCultivate: false,
+        exploreCount: 0
+      },
       nextGameTimes: {
         rps: null,
         dice: null,

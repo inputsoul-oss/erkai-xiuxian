@@ -87,6 +87,7 @@
     smoothScrollToBottom
   } from '@/plugins/game'
   import { ElMessageBox } from 'element-plus'
+  import monsterData from '@/plugins/monster'
   import { generateBattleDecision } from '@/plugins/zhipuClient'
 
   const store = useMainStore()
@@ -117,6 +118,78 @@
   const aiBusy = ref(false)
   const aiAbort = ref(false)
   const aiLoopRunning = ref(false)
+  const ensureAutoExploreState = () => {
+    if (!player.value.autoExplore) {
+      player.value.autoExplore = {
+        enabled: false,
+        target: 0,
+        defeated: 0,
+        autoStartCultivate: false,
+        exploreCount: 0
+      }
+    }
+  }
+  const needsBreakthroughKills = () =>
+    player.value.level > 10 &&
+    player.value.cultivation >= player.value.maxCultivation &&
+    player.value.taskNum < player.value.level
+  const remainingBreakthroughKills = () => (needsBreakthroughKills() ? Math.max(0, player.value.level - player.value.taskNum) : 0)
+  const prepareNextBattleForAi = () => {
+    guashaRounds.value = 10
+    isFailedRetreat.value = false
+    isCaptureFailed.value = false
+    isFighting.value = false
+    victory.value = false
+    const level = player.value.level === 0 ? 1 : player.value.level
+    const monsterLv = level * player.value.reincarnation + level
+    const nextMonster = {
+      name: monsterData.monster_Names(monsterLv),
+      health: monsterData.monster_Health(monsterLv),
+      attack: monsterData.monster_Attack(monsterLv),
+      defense: monsterData.monster_Defense(monsterLv),
+      dodge: monsterData.monster_Criticalhitrate(monsterLv),
+      critical: monsterData.monster_Criticalhitrate(monsterLv)
+    }
+    monster.value = nextMonster
+    store.monster = nextMonster
+  }
+  const isAutoExploreEnabled = () => player.value.autoExplore?.enabled && player.value.autoExplore?.target > 0
+  const incrementAutoExploreDefeated = () => {
+    if (!isAutoExploreEnabled()) return 0
+    player.value.autoExplore.defeated += 1
+    return player.value.autoExplore.target - player.value.autoExplore.defeated
+  }
+  const finishAutoExplore = () => {
+    player.value.autoExplore.enabled = false
+    player.value.autoExplore.autoStartCultivate = true
+    stopFight()
+    router.push('/home')
+  }
+  const calcStrengtheningStones = item =>
+    Math.floor(item.level + (item.level * player.value.reincarnation) / 10)
+  const autoDismantleInventory = predicate => {
+    const inventory = player.value.inventory
+    const selling = inventory.filter(predicate)
+    if (!selling.length) return
+    const strengtheningStoneTotal = selling.reduce((total, item) => total + calcStrengtheningStones(item), 0)
+    player.value.props.money += selling.length
+    player.value.props.strengtheningStone += strengtheningStoneTotal
+    player.value.inventory = inventory.filter(item => !predicate(item))
+  }
+  const autoDismantleNonImmortal = () => {
+    autoDismantleInventory(item => item.quality !== 'pink' && !item.lock)
+  }
+  const autoDismantleAll = () => {
+    autoDismantleInventory(() => true)
+  }
+  const handleExploreCompletion = () => {
+    ensureAutoExploreState()
+    autoDismantleNonImmortal()
+    player.value.autoExplore.exploreCount += 1
+    if (player.value.autoExplore.exploreCount % 10 === 0 && player.value.inventory.length >= player.value.backpackCapacity) {
+      autoDismantleAll()
+    }
+  }
 
   // 玩家操作(绑定快捷键)
   const operate = oprName => {
@@ -278,7 +351,22 @@
         // 发送提示
         texts.value.push(`击败${monster.value.name}后你获得了${reincarnation}颗培养丹`)
         findTreasure(monster.value.name)
-        stopFight()
+        handleExploreCompletion()
+        if (isAutoExploreEnabled()) {
+          const remainingAuto = incrementAutoExploreDefeated()
+          if (remainingAuto <= 0) {
+            finishAutoExplore()
+            return
+          }
+          stopFight()
+          router.push('/map')
+          return
+        }
+        if (isAiAssist.value && remainingBreakthroughKills() > 0 && player.value.health > 0) {
+          prepareNextBattleForAi()
+        } else {
+          stopFight()
+        }
       } else if (player.value.health <= 0) {
         texts.value.push('你因为太弱被击败了。')
         stopFight()
@@ -384,6 +472,9 @@
         aiBusy.value = false
       }
       if (!isAiAssist.value || aiAbort.value) break
+      if (decision?.action === 'retreat' && remainingBreakthroughKills() > 0) {
+        decision = { ...decision, action: 'attack' }
+      }
       if (decision?.reason) texts.value.push(`智谱建议：${decision.reason}`)
       if (decision?.action === 'retreat') {
         texts.value.push('智谱选择撤退。')
@@ -605,9 +696,13 @@
   })
 
   onMounted(() => {
+    ensureAutoExploreState()
     if (monster.value.name) loading.value = false
     // 添加键盘监听
     window.addEventListener('keydown', operate)
+    if (isAutoExploreEnabled()) {
+      setTimeout(() => startFight(), 0)
+    }
   })
 </script>
 

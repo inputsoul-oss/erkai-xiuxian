@@ -46,6 +46,46 @@
   const timerIds = ref([])
   const observer = ref(null)
   const scrollbar = ref(null)
+  const ensureAutoExploreState = () => {
+    if (!player.value.autoExplore) {
+      player.value.autoExplore = {
+        enabled: false,
+        target: 0,
+        defeated: 0,
+        autoStartCultivate: false,
+        exploreCount: 0
+      }
+    }
+  }
+  const applyAttackPoints = () => {
+    if (!player.value.points) return
+    const multiplier = player.value.reincarnation ? player.value.reincarnation * 10 : 1
+    const addAttack = player.value.points * 50 * multiplier
+    player.value.attack += addAttack
+    player.value.points = 0
+    player.value.score = equip.calculateEquipmentScore(
+      player.value.dodge,
+      player.value.attack,
+      player.value.maxHealth,
+      player.value.critical,
+      player.value.defense
+    )
+  }
+  const autoReincarnateIfReady = () => {
+    if (player.value.level !== maxLv) return false
+    applyAttackPoints()
+    const requirement = player.value.reincarnation == 0 ? 100 : player.value.reincarnation * 100
+    if (player.value.taskNum < requirement) return false
+    player.value.level = 0
+    player.value.taskNum = 0
+    player.value.cultivation = 0
+    player.value.maxCultivation = 100
+    player.value.reincarnation++
+    player.value.backpackCapacity += 50
+    player.value.health = player.value.maxHealth
+    startCultivate()
+    return true
+  }
   const buttonsFor = computed(() => {
     return [
       { text: '开始修炼', click: () => startCultivate(), disabled: !isStart.value },
@@ -136,6 +176,16 @@
           stopCultivate()
           isStop.value = false
           isStart.value = false
+          const remaining = player.value.level - player.value.taskNum
+          if (remaining > 0) {
+            ensureAutoExploreState()
+            player.value.autoExplore.enabled = true
+            player.value.autoExplore.target = remaining
+            player.value.autoExplore.defeated = 0
+            player.value.autoExplore.autoStartCultivate = false
+            gameNotifys({ title: '提示', message: `已开启自动探索，目标 ${remaining} 个敌人` })
+            router.push('/map')
+          }
           texts.value.push(
             `当前境界修为已满, 你需要通过击败<span class="textColor">(${player.value.taskNum} / ${player.value.level})</span>个敌人证道突破`
           )
@@ -147,6 +197,10 @@
         player.value.health = player.value.maxHealth
         player.value.maxCultivation = Math.floor(100 * Math.pow(2, player.value.level * reincarnation))
         texts.value.push(`恭喜你突破了！当前境界：${levelNames(player.value.level)}`)
+        if (player.value.level % 10 === 0) {
+          applyAttackPoints()
+        }
+        if (autoReincarnateIfReady()) return
       } else {
         player.value.cultivation += exp
       }
@@ -155,7 +209,7 @@
       isStart.value = false
       player.value.level = maxLv
       player.value.maxCultivation = Math.floor(100 * Math.pow(2, maxLv * reincarnation))
-      stopCultivate()
+      if (!autoReincarnateIfReady()) stopCultivate()
     }
   }
 
@@ -224,6 +278,7 @@
   }
 
   onMounted(() => {
+    ensureAutoExploreState()
     startCultivate()
     setupObserver()
   })

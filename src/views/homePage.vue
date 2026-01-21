@@ -1037,18 +1037,23 @@
         </el-icon>
       </div>
     </el-drawer>
-    <el-drawer
-      title="新手礼包"
-      v-model="newBieBox"
-      :before-close="confirmCollectionNewBie"
-      class="newBieBox"
-      direction="rtl"
-    >
-      <div class="newBie">
-        <tag
-          v-for="(item, index) in newBieData"
-          class="inventory-item"
-          :type="item.quality"
+      <el-drawer
+        title="新手礼包"
+        v-model="newBieBox"
+        :before-close="confirmCollectionNewBie"
+        class="newBieBox"
+        direction="rtl"
+      >
+        <div class="newbie-cheat">
+          <el-input v-model="newBieCheatCode" placeholder="输入作弊码" clearable />
+          <el-button type="primary" @click="applyNewbieCheatCode">激活</el-button>
+        </div>
+        <div class="newbie-cheat-status" v-if="newBieCheatEnabled">作弊码已生效，顶级装备概率 100%</div>
+        <div class="newBie">
+          <tag
+            v-for="(item, index) in newBieData"
+            class="inventory-item"
+            :type="item.quality"
           :key="index"
           @click="newBieInfo(item)"
         >
@@ -1177,6 +1182,8 @@
   const activeName = ref('illustrations')
   /// 新手礼包装备信息
   const newBieItem = ref({})
+  const newBieCheatCode = ref('')
+  const newBieCheatEnabled = ref(false)
   // 上传的脚本文件
   const scriptFile = ref('')
   // 灵宠信息弹窗
@@ -1232,6 +1239,10 @@
     achievementAll.value = achievement.all()
     illustrationsItems.value = equipAll.drawPrize(maxLv)
     startGame()
+    if (player.value.autoExplore?.autoStartCultivate) {
+      player.value.autoExplore.autoStartCultivate = false
+      setTimeout(() => router.push('/cultivate'), 200)
+    }
   })
 
   // 监听背包标签页切换
@@ -2106,6 +2117,16 @@
       })
       .catch(() => {})
   }
+  const applyNewbieCheatCode = () => {
+    if (newBieCheatCode.value.trim() === 'Seven') {
+      newBieCheatEnabled.value = true
+      gameNotifys({ title: '提示', message: '作弊码生效：顶级装备概率提升至 100%' })
+      return
+    }
+    newBieCheatEnabled.value = false
+    gameNotifys({ title: '提示', message: '作弊码无效' })
+  }
+
   // 赠送新手礼包
   const newbiePack = timesLeft => {
     // 如果没有领取新手礼包
@@ -2116,14 +2137,15 @@
     newBieBox.value = true
     // 初始化物品
     let equipItem = {}
+    const forceTop = newBieCheatEnabled.value
     // 神兵
-    if (timesLeft == 4) equipItem = equip.equip_Weapons(10, false)
+    if (timesLeft == 4) equipItem = equip.equip_Weapons(10, false, forceTop)
     // 护甲
-    else if (timesLeft == 3) equipItem = equip.equip_Armors(10, false)
+    else if (timesLeft == 3) equipItem = equip.equip_Armors(10, false, forceTop)
     // 灵宝
-    else if (timesLeft == 2) equipItem = equip.equip_Accessorys(10, false)
+    else if (timesLeft == 2) equipItem = equip.equip_Accessorys(10, false, forceTop)
     // 法器
-    else if (timesLeft == 1) equipItem = equip.equip_Sutras(10, false)
+    else if (timesLeft == 1) equipItem = equip.equip_Sutras(10, false, forceTop)
     // 修改刷新按钮加载状态
     else if (timesLeft == 0) newBieLoading.value = false
     // 终止
@@ -2776,6 +2798,18 @@
     flex-direction: column;
     height: 128px;
     margin-bottom: 10px;
+  }
+
+  .newbie-cheat {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .newbie-cheat-status {
+    font-size: 12px;
+    color: var(--el-color-danger);
+    margin-bottom: 6px;
   }
 
   .newbieinfo-box p {

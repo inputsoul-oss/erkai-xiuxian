@@ -60,6 +60,17 @@
         <span class="shortcutKeys">(D)</span>
       </el-button>
     </div>
+    <div class="auto-explore">
+      <div class="auto-explore-controls">
+        <span class="auto-explore-label">自动探索击败数</span>
+        <el-input-number v-model="autoExploreTarget" :min="1" :max="999" controls-position="right" />
+        <el-button type="primary" @click="startAutoExplore" :disabled="autoExploreEnabled">开始</el-button>
+        <el-button @click="stopAutoExplore" :disabled="!autoExploreEnabled">停止</el-button>
+      </div>
+      <div class="auto-explore-status" v-if="autoExploreEnabled">
+        已击败 {{ autoExploreDefeated }} / {{ autoExploreTarget }}
+      </div>
+    </div>
     <el-drawer v-model="fishingShow" @close="endGame" title="钓鱼" direction="rtl" class="strengthen">
       <div class="game-container">
         <div class="time">倒计时: {{ fishing.timeLeft }}秒</div>
@@ -194,6 +205,21 @@
   // 玩家在Y轴的位置
   const playerY = ref(0)
   const npcInfo = ref({})
+  const autoExploreTarget = ref(player.value.autoExplore?.target || 1)
+  const autoExploreDefeated = computed(() => player.value.autoExplore?.defeated || 0)
+  const autoExploreEnabled = computed(() => !!player.value.autoExplore?.enabled)
+  let autoExploreTimerId = null
+  const ensureAutoExploreState = () => {
+    if (!player.value.autoExplore) {
+      player.value.autoExplore = {
+        enabled: false,
+        target: 0,
+        defeated: 0,
+        autoStartCultivate: false,
+        exploreCount: 0
+      }
+    }
+  }
   // 钓鱼相关
   const fishing = ref({
     // 分数
@@ -697,6 +723,71 @@
     return ['obstacle', 'fishing', 'npc'].includes(grid.value[index]?.type)
   }
 
+  const startAutoExplore = () => {
+    ensureAutoExploreState()
+    const target = Number(autoExploreTarget.value)
+    if (!target || target < 1) {
+      gameNotifys({ title: '提示', message: '请输入有效的击败数量' })
+      return
+    }
+    player.value.autoExplore.enabled = true
+    player.value.autoExplore.target = target
+    player.value.autoExplore.defeated = 0
+    player.value.autoExplore.autoStartCultivate = false
+    runAutoExploreLoop()
+    gameNotifys({ title: '提示', message: `自动探索已开启，目标 ${target} 个敌人` })
+  }
+
+  const stopAutoExplore = () => {
+    player.value.autoExplore.enabled = false
+    clearAutoExploreTimer()
+    gameNotifys({ title: '提示', message: '自动探索已停止' })
+  }
+
+  const clearAutoExploreTimer = () => {
+    if (autoExploreTimerId) {
+      clearInterval(autoExploreTimerId)
+      autoExploreTimerId = null
+    }
+  }
+
+  const getAvailableMoves = () => {
+    const moves = []
+    if (playerY.value > 0 && grid.value[(playerY.value - 1) * gridSize.value + playerX.value]?.type === 'empty') moves.push('up')
+    if (
+      playerY.value < gridSize.value - 1 &&
+      grid.value[(playerY.value + 1) * gridSize.value + playerX.value]?.type === 'empty'
+    )
+      moves.push('down')
+    if (playerX.value > 0 && grid.value[playerY.value * gridSize.value + (playerX.value - 1)]?.type === 'empty') moves.push('left')
+    if (
+      playerX.value < gridSize.value - 1 &&
+      grid.value[playerY.value * gridSize.value + (playerX.value + 1)]?.type === 'empty'
+    )
+      moves.push('right')
+    return moves
+  }
+
+  const runAutoExploreLoop = () => {
+    if (autoExploreTimerId) return
+    autoExploreTimerId = setInterval(() => {
+      if (!player.value.autoExplore.enabled) {
+        clearAutoExploreTimer()
+        return
+      }
+      if (player.value.health <= 0) {
+        player.value.autoExplore.enabled = false
+        clearAutoExploreTimer()
+        return
+      }
+      if (npcShow.value || fishingShow.value) return
+      const moves = getAvailableMoves()
+      if (!moves.length) return
+      const next = moves[Math.floor(Math.random() * moves.length)]
+      move(next)
+    }, 500)
+  }
+
   // 根据方向移动玩家
   const move = direction => {
     let newX = playerX.value
@@ -1059,6 +1150,7 @@
   }
 
   onMounted(() => {
+    ensureAutoExploreState()
     if (mapData.value.map.length) {
       // 恢复地图数据
       grid.value = mapData.value.map
@@ -1074,11 +1166,13 @@
     if (store.mapScroll) nextTick(() => updateScroll(store.mapScroll))
     // 添加键盘监听
     window.addEventListener('keydown', move)
+    if (player.value.autoExplore?.enabled) runAutoExploreLoop()
   })
 
   onUnmounted(() => {
     // 清空所有定时
     clearAllTiming()
+    clearAutoExploreTimer()
     // 移除键盘监听
     window.removeEventListener('keydown', move)
   })
@@ -1163,6 +1257,32 @@
     padding: 10px;
     margin: 5px;
     font-size: 16px;
+  }
+
+  .auto-explore {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .auto-explore-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .auto-explore-label {
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+  }
+
+  .auto-explore-status {
+    font-size: 12px;
+    color: var(--el-color-danger);
   }
 
   .legend {
