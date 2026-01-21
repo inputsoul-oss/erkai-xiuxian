@@ -1,5 +1,14 @@
 <template>
   <div class="games">
+    <div class="game-cheat">
+      <el-autocomplete
+        v-model="gameCheatCode"
+        :fetch-suggestions="queryGameCheats"
+        placeholder="输入作弊码"
+        clearable
+      />
+      <el-button type="primary" @click="applyGameCheat">激活</el-button>
+    </div>
     <el-tabs v-model="tabs">
       <el-tab-pane name="checkin" label="签到">
         <CheckIn @game-result="processGameResult" />
@@ -49,13 +58,57 @@
   import { useRouter } from 'vue-router'
   import { ref, computed, watch, onMounted } from 'vue'
   import { useMainStore } from '@/plugins/store'
-  import { formatNumberToChineseUnit } from '@/plugins/game'
+  import { formatNumberToChineseUnit, gameNotifys } from '@/plugins/game'
 
   const store = useMainStore()
   const router = useRouter()
   const tabs = ref('checkin')
   const player = ref(store.player)
   const selectedGame = ref(null)
+  const gameCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const gameCheatOptions = ['Seven-GameWin', 'Seven-Checkin']
+  const queryGameCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(gameCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
+
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
+      }
+    }
+  }
+  const applyGameCheat = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(gameCheatCode.value)
+    const cheats = player.value.cheats.games
+    let desc = ''
+    switch (code) {
+      case 'Seven-GameWin':
+        cheats.alwaysWin = !cheats.alwaysWin
+        desc = cheats.alwaysWin ? '小游戏必胜开启' : '小游戏必胜关闭'
+        break
+      case 'Seven-Checkin':
+        cheats.checkinMakeup = !cheats.checkinMakeup
+        if (cheats.checkinMakeup) player.value.checkedInToday = false
+        desc = cheats.checkinMakeup ? '签到补签开启' : '签到补签关闭'
+        break
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
+  }
 
   const attributeList = computed(() => {
     return [
@@ -67,8 +120,11 @@
   })
 
   const processGameResult = result => {
-    if (result.success) updatePlayerWins(result)
-    else updatePlayerLosses(result)
+    ensureCheats()
+    const cheats = player.value.cheats.games
+    const resolved = cheats.alwaysWin && !result.success ? { ...result, success: true } : result
+    if (resolved.success) updatePlayerWins(resolved)
+    else updatePlayerLosses(resolved)
   }
 
   const updatePlayerWins = result => {
@@ -99,6 +155,7 @@
   })
 
   onMounted(() => {
+    ensureCheats()
     checkDailyReset()
   })
 </script>
@@ -120,5 +177,13 @@
   .attribute-label {
     margin: 15px 0;
     width: 40%;
+  }
+
+  .game-cheat {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 </style>

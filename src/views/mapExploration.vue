@@ -70,6 +70,15 @@
       <div class="auto-explore-status" v-if="autoExploreEnabled">
         已击败 {{ autoExploreDefeated }} / {{ autoExploreTarget }}
       </div>
+      <div class="auto-explore-cheat">
+        <el-autocomplete
+          v-model="exploreCheatCode"
+          :fetch-suggestions="queryExploreCheats"
+          placeholder="输入作弊码"
+          clearable
+        />
+        <el-button type="primary" @click="applyExploreCheat">激活</el-button>
+      </div>
     </div>
     <el-drawer v-model="fishingShow" @close="endGame" title="钓鱼" direction="rtl" class="strengthen">
       <div class="game-container">
@@ -209,6 +218,14 @@
   const autoExploreDefeated = computed(() => player.value.autoExplore?.defeated || 0)
   const autoExploreEnabled = computed(() => !!player.value.autoExplore?.enabled)
   let autoExploreTimerId = null
+  const exploreCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const exploreCheatOptions = ['Seven-Encounter', 'Seven-NoEncounter', 'Seven-TopDrop']
+  const queryExploreCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(exploreCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
   const ensureAutoExploreState = () => {
     if (!player.value.autoExplore) {
       player.value.autoExplore = {
@@ -217,6 +234,20 @@
         defeated: 0,
         autoStartCultivate: false,
         exploreCount: 0
+      }
+    }
+  }
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
       }
     }
   }
@@ -683,7 +714,9 @@
       map: grid.value
     }
     // 20%概率遇怪
-    const rand = isLucky(20)
+    ensureCheats()
+    const exploreCheats = player.value.cheats.explore
+    const rand = exploreCheats.forceEncounter ? true : exploreCheats.forceNoEncounter ? false : isLucky(20)
     if (rand && playerIndex != 0) {
       // 玩家境界
       let level = player.value.level == 0 ? 1 : player.value.level
@@ -736,6 +769,33 @@
     player.value.autoExplore.autoStartCultivate = false
     runAutoExploreLoop()
     gameNotifys({ title: '提示', message: `自动探索已开启，目标 ${target} 个敌人` })
+  }
+
+  const applyExploreCheat = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(exploreCheatCode.value)
+    const cheats = player.value.cheats.explore
+    let desc = ''
+    switch (code) {
+      case 'Seven-Encounter':
+        cheats.forceEncounter = !cheats.forceEncounter
+        if (cheats.forceEncounter) cheats.forceNoEncounter = false
+        desc = cheats.forceEncounter ? '强制遇敌开启' : '强制遇敌关闭'
+        break
+      case 'Seven-NoEncounter':
+        cheats.forceNoEncounter = !cheats.forceNoEncounter
+        if (cheats.forceNoEncounter) cheats.forceEncounter = false
+        desc = cheats.forceNoEncounter ? '强制不遇敌开启' : '强制不遇敌关闭'
+        break
+      case 'Seven-TopDrop':
+        cheats.forceTopDrop = !cheats.forceTopDrop
+        desc = cheats.forceTopDrop ? '顶级掉落开启' : '顶级掉落关闭'
+        break
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
   }
 
   const stopAutoExplore = () => {
@@ -1151,6 +1211,7 @@
 
   onMounted(() => {
     ensureAutoExploreState()
+    ensureCheats()
     if (mapData.value.map.length) {
       // 恢复地图数据
       grid.value = mapData.value.map
@@ -1271,6 +1332,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .auto-explore-cheat {
+    display: flex;
+    gap: 8px;
+    align-items: center;
     flex-wrap: wrap;
     justify-content: center;
   }

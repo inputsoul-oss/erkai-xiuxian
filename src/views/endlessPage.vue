@@ -30,6 +30,15 @@
         {{ item.text }}
       </el-button>
     </div>
+    <div class="endless-cheat">
+      <el-autocomplete
+        v-model="endlessCheatCode"
+        :fetch-suggestions="queryEndlessCheats"
+        placeholder="输入作弊码"
+        clearable
+      />
+      <el-button type="primary" @click="applyEndlessCheat">激活</el-button>
+    </div>
     <div class="sweep-info">
       <el-row>
         <el-col :span="6" v-for="(item, index) in sweepData" :key="index">
@@ -70,6 +79,56 @@
   const store = useMainStore()
   // 玩家数据
   const player = ref(store.player)
+  const endlessCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const endlessCheatOptions = ['Seven-God', 'Seven-OneHit', 'Seven-Crit', 'Seven-Dodge']
+  const queryEndlessCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(endlessCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
+      }
+    }
+  }
+  const applyEndlessCheat = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(endlessCheatCode.value)
+    const cheats = player.value.cheats.battle
+    let desc = ''
+    switch (code) {
+      case 'Seven-God':
+        cheats.godMode = !cheats.godMode
+        desc = cheats.godMode ? '无敌开启' : '无敌关闭'
+        break
+      case 'Seven-OneHit':
+        cheats.oneHit = !cheats.oneHit
+        desc = cheats.oneHit ? '秒杀开启' : '秒杀关闭'
+        break
+      case 'Seven-Crit':
+        cheats.crit100 = !cheats.crit100
+        desc = cheats.crit100 ? '暴击 100% 开启' : '暴击 100% 关闭'
+        break
+      case 'Seven-Dodge':
+        cheats.dodge100 = !cheats.dodge100
+        desc = cheats.dodge100 ? '闪避 100% 开启' : '闪避 100% 关闭'
+        break
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
+  }
   // 怪物数据
   const monster = ref(null)
   const observer = ref(null)
@@ -252,6 +311,8 @@
 
   // 进行战斗
   const fight = () => {
+    ensureCheats()
+    const battleCheats = player.value.cheats.battle
     // 被击败
     if (player.value.health <= 0) {
       handlePlayerDefeat()
@@ -262,17 +323,33 @@
       generateMonster()
       return
     }
+    const originalCrit = player.value.critical
+    const originalDodge = player.value.dodge
+    if (battleCheats.crit100) player.value.critical = 1
+    if (battleCheats.dodge100) player.value.dodge = 1
     // 玩家攻击怪物
     const playerAttackResult = combatSystem.executeCombatRound(player.value, monster.value)
     generateCombatLog(player.value.name, monster.value.name, playerAttackResult)
     // 检查怪物是否被击败
     if (monster.value.health <= 0) {
+      player.value.critical = originalCrit
+      player.value.dodge = originalDodge
+      handleMonsterDefeat()
+      return
+    }
+    if (battleCheats.oneHit) {
+      monster.value.health = 0
+      player.value.critical = originalCrit
+      player.value.dodge = originalDodge
       handleMonsterDefeat()
       return
     }
     // 怪物攻击玩家
     const monsterAttackResult = combatSystem.executeCombatRound(monster.value, player.value)
     generateCombatLog(monster.value.name, player.value.name, monsterAttackResult)
+    if (battleCheats.godMode) player.value.health = player.value.maxHealth
+    player.value.critical = originalCrit
+    player.value.dodge = originalDodge
     // 玩家是否被击败
     if (player.value.health <= 0) {
       handlePlayerDefeat()
@@ -371,15 +448,17 @@
     let equipItem = {}
     let exp = Math.floor(player.value.maxCultivation / 100)
     exp = exp ? exp : 1
+    ensureCheats()
+    const forceTopDrop = player.value.cheats.explore.forceTopDrop
     const randomInt = equip.getRandomInt(1, 4)
     // 神兵
-    if (randomInt == 1) equipItem = equip.equip_Weapons(player.value.level)
+    if (randomInt == 1) equipItem = equip.equip_Weapons(player.value.level, false, forceTopDrop)
     // 护甲
-    else if (randomInt == 2) equipItem = equip.equip_Armors(player.value.level)
+    else if (randomInt == 2) equipItem = equip.equip_Armors(player.value.level, false, forceTopDrop)
     // 灵宝
-    else if (randomInt == 3) equipItem = equip.equip_Accessorys(player.value.level)
+    else if (randomInt == 3) equipItem = equip.equip_Accessorys(player.value.level, false, forceTopDrop)
     // 法器
-    else if (randomInt == 4) equipItem = equip.equip_Sutras(player.value.level)
+    else if (randomInt == 4) equipItem = equip.equip_Sutras(player.value.level, false, forceTopDrop)
     battleLogs.value.push(
       `你发现了一个宝箱，打开后获得${levels[equipItem.quality]}${equipItem.name}(${genre[equipItem.type]})`
     )
@@ -571,6 +650,7 @@
   }
 
   onMounted(() => {
+    ensureCheats()
     //检查成就
     const newAchievements = checkAchievements(player.value, 'monster')
     newAchievements.forEach(achievement => {
@@ -640,6 +720,15 @@
   .sweep-info p {
     margin: 5px 0;
     font-size: 14px;
+  }
+
+  .endless-cheat {
+    margin: 8px 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .battle-log {

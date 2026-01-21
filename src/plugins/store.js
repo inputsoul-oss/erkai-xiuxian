@@ -81,6 +81,31 @@ export const useMainStore = defineStore('main', {
         autoStartCultivate: false,
         exploreCount: 0
       },
+      cheats: {
+        resources: {},
+        battle: {
+          godMode: false,
+          oneHit: false,
+          crit100: false,
+          dodge100: false
+        },
+        explore: {
+          forceEncounter: false,
+          forceNoEncounter: false,
+          forceTopDrop: false
+        },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: {
+          autoWin: false,
+          infiniteTimes: false
+        },
+        games: {
+          alwaysWin: false,
+          checkinMakeup: false
+        }
+      },
       nextGameTimes: {
         rps: null,
         dice: null,

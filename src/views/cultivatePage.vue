@@ -26,6 +26,15 @@
         <el-button class="item" @click="item.click" :disabled="item.disabled">{{ item.text }}</el-button>
       </div>
     </div>
+    <div class="cultivate-cheat">
+      <el-autocomplete
+        v-model="cultivateCheatCode"
+        :fetch-suggestions="queryCultivateCheats"
+        placeholder="输入作弊码"
+        clearable
+      />
+      <el-button type="primary" @click="applyCultivateCheat">激活</el-button>
+    </div>
   </div>
 </template>
 
@@ -46,6 +55,14 @@
   const timerIds = ref([])
   const observer = ref(null)
   const scrollbar = ref(null)
+  const cultivateCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const cultivateCheatOptions = ['Seven-MaxCultivation', 'Seven-Points', 'Seven-AutoBreak']
+  const queryCultivateCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(cultivateCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
   const ensureAutoExploreState = () => {
     if (!player.value.autoExplore) {
       player.value.autoExplore = {
@@ -56,6 +73,44 @@
         exploreCount: 0
       }
     }
+  }
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
+      }
+    }
+  }
+  const applyCultivateCheat = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(cultivateCheatCode.value)
+    let desc = ''
+    switch (code) {
+      case 'Seven-MaxCultivation':
+        player.value.cultivation = player.value.maxCultivation
+        desc = '修为直接满'
+        break
+      case 'Seven-Points':
+        player.value.points += 999
+        desc = '境界点 +999'
+        break
+      case 'Seven-AutoBreak':
+        player.value.cultivation = player.value.maxCultivation
+        breakThrough(0)
+        desc = '自动突破'
+        break
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
   }
   const applyAttackPoints = () => {
     if (!player.value.points) return
@@ -279,6 +334,7 @@
 
   onMounted(() => {
     ensureAutoExploreState()
+    ensureCheats()
     startCultivate()
     setupObserver()
   })
@@ -344,6 +400,14 @@
 
   .item {
     width: 100%;
+  }
+
+  .cultivate-cheat {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .event-text {

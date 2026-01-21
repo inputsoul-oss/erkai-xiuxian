@@ -58,6 +58,15 @@
           </el-button>
         </div>
       </div>
+      <div class="battle-cheat">
+        <el-autocomplete
+          v-model="battleCheatCode"
+          :fetch-suggestions="queryBattleCheats"
+          placeholder="输入作弊码"
+          clearable
+        />
+        <el-button type="primary" @click="applyBattleCheat">激活</el-button>
+      </div>
     </div>
     <div class="cultivate error" v-else>
       <el-result icon="error" title="缺少对战信息" sub-title="请返回地图重新探索">
@@ -118,6 +127,14 @@
   const aiBusy = ref(false)
   const aiAbort = ref(false)
   const aiLoopRunning = ref(false)
+  const battleCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const battleCheatOptions = ['Seven-God', 'Seven-OneHit', 'Seven-Crit', 'Seven-Dodge']
+  const queryBattleCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(battleCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
   const ensureAutoExploreState = () => {
     if (!player.value.autoExplore) {
       player.value.autoExplore = {
@@ -128,6 +145,48 @@
         exploreCount: 0
       }
     }
+  }
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
+      }
+    }
+  }
+  const applyBattleCheat = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(battleCheatCode.value)
+    const cheats = player.value.cheats.battle
+    let desc = ''
+    switch (code) {
+      case 'Seven-God':
+        cheats.godMode = !cheats.godMode
+        desc = cheats.godMode ? '无敌开启' : '无敌关闭'
+        break
+      case 'Seven-OneHit':
+        cheats.oneHit = !cheats.oneHit
+        desc = cheats.oneHit ? '秒杀开启' : '秒杀关闭'
+        break
+      case 'Seven-Crit':
+        cheats.crit100 = !cheats.crit100
+        desc = cheats.crit100 ? '暴击 100% 开启' : '暴击 100% 关闭'
+        break
+      case 'Seven-Dodge':
+        cheats.dodge100 = !cheats.dodge100
+        desc = cheats.dodge100 ? '闪避 100% 开启' : '闪避 100% 关闭'
+        break
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
   }
   const needsBreakthroughKills = () =>
     player.value.level > 10 &&
@@ -314,8 +373,10 @@
     // 是否暴击
     let isMCritical = false,
       isCritical = false
+    ensureCheats()
+    const battleCheats = player.value.cheats.battle
     // 怪物是否闪避
-    const isMHit = Math.random() > player.value.dodge
+    const isMHit = battleCheats.dodge100 ? false : Math.random() > player.value.dodge
     // 玩家是否闪避
     const isPHit = Math.random() > monster.value.dodge
     // 检查野怪是否暴击
@@ -326,16 +387,18 @@
       isMCritical = true
     }
     // 检查玩家是否暴击
-    if (Math.random() < player.value.critical) {
+    if (Math.random() < (battleCheats.crit100 ? 1 : player.value.critical)) {
       // 玩家暴击，伤害加倍
       playerHarm *= 1.5
       // 玩家成功暴击
       isCritical = true
     }
     // 怪物没有闪避
+    if (battleCheats.godMode) monsterHarm = 0
     if (isMHit) player.value.health -= monsterHarm
     // 玩家没有闪避
     if (isPHit) monster.value.health -= playerHarm
+    if (battleCheats.oneHit) monster.value.health = 0
     player.value.health = Math.max(0, player.value.health)
     monster.value.health = Math.max(0, monster.value.health)
     if (guashaRounds.value > 1) {
@@ -497,14 +560,16 @@
     // 如果总背包容量大于装备背包容量
     victory.value = true
     const randomInt = equip.getRandomInt(1, 4)
+    ensureCheats()
+    const forceTopDrop = player.value.cheats.explore.forceTopDrop
     // 神兵
-    if (randomInt == 1) equipItem = equip.equip_Weapons(player.value.level)
+    if (randomInt == 1) equipItem = equip.equip_Weapons(player.value.level, false, forceTopDrop)
     // 护甲
-    else if (randomInt == 2) equipItem = equip.equip_Armors(player.value.level)
+    else if (randomInt == 2) equipItem = equip.equip_Armors(player.value.level, false, forceTopDrop)
     // 灵宝
-    else if (randomInt == 3) equipItem = equip.equip_Accessorys(player.value.level)
+    else if (randomInt == 3) equipItem = equip.equip_Accessorys(player.value.level, false, forceTopDrop)
     // 法器
-    else if (randomInt == 4) equipItem = equip.equip_Sutras(player.value.level)
+    else if (randomInt == 4) equipItem = equip.equip_Sutras(player.value.level, false, forceTopDrop)
     texts.value.push(
       `你击败${monster.value.name}后，发现了一个宝箱，打开后获得了<span class="el-tag el-tag--${equipItem.quality}">${
         levels[equipItem.quality]
@@ -697,6 +762,7 @@
 
   onMounted(() => {
     ensureAutoExploreState()
+    ensureCheats()
     if (monster.value.name) loading.value = false
     // 添加键盘监听
     window.addEventListener('keydown', operate)
@@ -722,6 +788,14 @@
     align-items: center;
     justify-content: center;
     min-height: 770px;
+  }
+
+  .battle-cheat {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   @media only screen and (max-width: 768px) {

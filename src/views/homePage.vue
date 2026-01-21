@@ -403,6 +403,15 @@
           <el-button class="item" @click="show = true">游戏设置</el-button>
         </div>
       </div>
+      <div class="cheat-panel">
+        <el-autocomplete
+          v-model="homeCheatCode"
+          :fetch-suggestions="queryHomeCheats"
+          placeholder="输入作弊码"
+          clearable
+        />
+        <el-button type="primary" @click="applyHomeCheatCode">激活</el-button>
+      </div>
     </div>
     <el-drawer title="修仙境界表" v-model="isLevel" direction="ltr" class="levels">
       <tag
@@ -484,6 +493,21 @@
         <div class="click-box">
           <el-checkbox v-model="protect" label="炼器保护" />
           <el-checkbox v-model="increase" label="炼器增幅" />
+          <div class="enhance-cheat">
+            <el-autocomplete
+              v-model="enhanceCheatCode"
+              :fetch-suggestions="queryEnhanceCheats"
+              placeholder="输入作弊码"
+              clearable
+            />
+            <el-button type="primary" @click="applyEnhanceCheatCode">激活</el-button>
+          </div>
+          <div class="enhance-cheat-params" v-if="enhanceCheatEnabled">
+            <span class="enhance-cheat-label">炼器石消耗降低%</span>
+            <el-input-number v-model="enhanceCheatStoneDiscount" :min="0" :max="100" controls-position="right" />
+            <span class="enhance-cheat-label">属性提升%</span>
+            <el-input-number v-model="enhanceCheatAttrBoost" :min="0" :max="1000" controls-position="right" />
+          </div>
           <el-popover
             trigger="hover"
             :width="350"
@@ -981,6 +1005,7 @@
         <el-button type="warning" class="dialog-footer-button" @click="deleteScriptData">删除脚本</el-button>
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
+        <el-button class="dialog-footer-button" @click="showCheatHints">作弊码提示</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
         <el-button type="success" class="dialog-footer-button" @click="copyContent('url')">开源地址</el-button>
         <el-divider>当前版本为: {{ ver }}</el-divider>
@@ -1160,6 +1185,143 @@
   const protect = ref(false)
   // 炼器增幅
   const increase = ref(false)
+  const enhanceCheatCode = ref('')
+  const enhanceCheatEnabled = ref(false)
+  const enhanceCheatStoneDiscount = ref(0)
+  const enhanceCheatAttrBoost = ref(0)
+  const homeCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const homeCheatOptions = [
+    'Seven-Money',
+    'Seven-Dan',
+    'Seven-Stone',
+    'Seven-Root',
+    'Seven-BagDouble',
+    'Seven-UnlockAll',
+    'Seven-PetLevel',
+    'Seven-PetRoot',
+    'Seven-PetFavor'
+  ]
+  const queryHomeCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(homeCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
+  const queryEnhanceCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(['Seven'].filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
+  const applyEnhanceCheatCode = () => {
+    if (normalizeCheatCode(enhanceCheatCode.value) === 'Seven') {
+      enhanceCheatEnabled.value = true
+      gameNotifys({ title: '提示', message: '作弊码生效：炼器成功率 100%' })
+      return
+    }
+    enhanceCheatEnabled.value = false
+    gameNotifys({ title: '提示', message: '作弊码无效' })
+  }
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
+      }
+    }
+  }
+  const getTargetPet = () => {
+    if (player.value.pet && Object.keys(player.value.pet).length) return player.value.pet
+    if (player.value.pets && player.value.pets.length) return player.value.pets[0]
+    return null
+  }
+  const applyHomeCheatCode = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(homeCheatCode.value)
+    const reward = 1000000
+    let desc = ''
+    switch (code) {
+      case 'Seven-Money':
+        player.value.props.money += reward
+        desc = '灵石 +1,000,000'
+        break
+      case 'Seven-Dan':
+        player.value.props.cultivateDan += reward
+        desc = '培养丹 +1,000,000'
+        break
+      case 'Seven-Stone':
+        player.value.props.strengtheningStone += reward
+        desc = '炼器石 +1,000,000'
+        break
+      case 'Seven-Root':
+        player.value.props.rootBone += reward
+        desc = '悟性丹 +1,000,000'
+        break
+      case 'Seven-BagDouble':
+        player.value.backpackCapacity *= 2
+        desc = '背包容量 x2'
+        break
+      case 'Seven-UnlockAll':
+        player.value.inventory.forEach(item => {
+          item.lock = false
+        })
+        desc = '背包装备全解锁'
+        break
+      case 'Seven-PetLevel': {
+        const pet = getTargetPet()
+        if (pet) pet.level += 10
+        desc = '灵宠等级 +10'
+        break
+      }
+      case 'Seven-PetRoot': {
+        const pet = getTargetPet()
+        if (pet) pet.rootBone = Math.floor(pet.rootBone * 1.5)
+        desc = '灵宠悟性 +50%'
+        break
+      }
+      case 'Seven-PetFavor': {
+        const pet = getTargetPet()
+        if (pet) pet.favorability = (pet.favorability || 0) + 1000
+        desc = '灵宠好感度 +1000'
+        break
+      }
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
+  }
+  const showCheatHints = () => {
+    ElMessageBox.prompt('输入 Seven 查看全部作弊码', '作弊码提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPlaceholder: '输入 Seven'
+    })
+      .then(({ value }) => {
+        if (value !== 'Seven') {
+          gameNotifys({ title: '提示', message: '作弊码无效' })
+          return
+        }
+        const message = `
+        <div class="monsterinfo"><div class="monsterinfo-box">
+          <p>资源: Seven-Money / Seven-Dan / Seven-Stone / Seven-Root (各+1,000,000)</p>
+          <p>背包: Seven-BagDouble / Seven-UnlockAll</p>
+          <p>宠物: Seven-PetLevel(+10) / Seven-PetRoot(+50%) / Seven-PetFavor(+1000)</p>
+          <p>战斗: Seven-God / Seven-OneHit / Seven-Crit / Seven-Dodge</p>
+          <p>探索: Seven-Encounter / Seven-NoEncounter / Seven-TopDrop</p>
+          <p>修炼: Seven-MaxCultivation / Seven-Points(+999) / Seven-AutoBreak</p>
+          <p>BOSS: Seven-BossWin / Seven-BossInfinite</p>
+          <p>玩法: Seven-GameWin / Seven-Checkin</p>
+        </div></div>`
+        ElMessageBox.alert(message, '作弊码列表', { dangerouslyUseHTMLString: true })
+      })
+      .catch(() => {})
+  }
   // 修改昵称
   const editName = ref(false)
   const levelsNum = ref({
@@ -1723,6 +1885,7 @@
     const successRate = calculateEnhanceSuccessRate(item)
     // 炼器消耗道具数量
     const calculateCost = calcEnhanceCost(item)
+    const attrBoost = enhanceCheatEnabled.value ? 1 + enhanceCheatAttrBoost.value / 100 : 1
     // 如果炼器石不足
     if (calculateCost > player.value.props.strengtheningStone) {
       // 发送通知
@@ -1758,11 +1921,11 @@
         // 如果炼器成功
         if (Math.random() <= successRate) {
           // 攻击
-          const attack = Math.floor(item.initial.attack * 0.2)
+          const attack = Math.floor(item.initial.attack * 0.2 * attrBoost)
           // 血量
-          const health = Math.floor(item.initial.health * 0.2)
+          const health = Math.floor(item.initial.health * 0.2 * attrBoost)
           // 防御
-          const defense = Math.floor(item.initial.defense * 0.2)
+          const defense = Math.floor(item.initial.defense * 0.2 * attrBoost)
           switch (item.type) {
             // 如果是神兵
             case 'weapon':
@@ -1817,7 +1980,7 @@
           })
         }
         // 扣除炼器石
-        player.value.props.strengtheningStone -= calculate
+        player.value.props.strengtheningStone -= calculateCost
       })
       .catch(() => {})
   }
@@ -1831,10 +1994,14 @@
     // 是否开启炼器保护
     // 是否开启炼器增幅
     // 最终所需消耗道具数量
-    return (baseCost + incrementPerLevel) * (protect.value ? 10 : 1) * (increase.value ? 5 : 1)
+    const cost = (baseCost + incrementPerLevel) * (protect.value ? 10 : 1) * (increase.value ? 5 : 1)
+    if (!enhanceCheatEnabled.value) return cost
+    const discount = Math.min(100, Math.max(0, enhanceCheatStoneDiscount.value))
+    return Math.ceil(cost * (1 - discount / 100))
   }
   // 计算炼器成功概率
   const calculateEnhanceSuccessRate = item => {
+    if (enhanceCheatEnabled.value) return 1
     // 基础成功率
     let baseSuccessRate = 1
     // 每级降低成功率
@@ -2680,6 +2847,35 @@
   .dialog-footer-button:nth-child(2 + n) {
     margin-top: 10px;
     width: 100%;
+  }
+
+  .cheat-panel {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .enhance-cheat {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .enhance-cheat-params {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .enhance-cheat-label {
+    font-size: 12px;
+    color: var(--el-text-color-primary);
   }
 
   /* 炼器弹窗 */

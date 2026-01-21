@@ -18,6 +18,15 @@
       <el-button @click="startFightBoss" :disabled="isEnd">发起战斗</el-button>
       <el-button @click="router.push('/home')">回家疗伤</el-button>
     </div>
+    <div class="boss-cheat">
+      <el-autocomplete
+        v-model="bossCheatCode"
+        :fetch-suggestions="queryBossCheats"
+        placeholder="输入作弊码"
+        clearable
+      />
+      <el-button type="primary" @click="applyBossCheat">激活</el-button>
+    </div>
   </div>
 </template>
 
@@ -27,7 +36,7 @@
   import { ref, onUnmounted, onMounted } from 'vue'
   import { useMainStore } from '@/plugins/store'
   import { ElMessageBox } from 'element-plus'
-  import { maxLv, levelNames, formatNumberToChineseUnit, genre, levels, smoothScrollToBottom } from '@/plugins/game'
+  import { maxLv, levelNames, formatNumberToChineseUnit, genre, levels, smoothScrollToBottom, gameNotifys } from '@/plugins/game'
 
   const router = useRouter()
   const store = useMainStore()
@@ -42,6 +51,48 @@
   const guashaRounds = ref(50)
   const equipmentInfo = ref({})
   const scrollbar = ref(null)
+  const bossCheatCode = ref('')
+  const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
+  const bossCheatOptions = ['Seven-BossWin', 'Seven-BossInfinite']
+  const queryBossCheats = (query, cb) => {
+    const q = normalizeCheatCode(query)
+    if (!q.startsWith('Seven')) return cb([])
+    cb(bossCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+  }
+  const ensureCheats = () => {
+    if (!player.value.cheats) {
+      player.value.cheats = {
+        resources: {},
+        battle: { godMode: false, oneHit: false, crit100: false, dodge100: false },
+        explore: { forceEncounter: false, forceNoEncounter: false, forceTopDrop: false },
+        growth: {},
+        backpack: {},
+        pet: {},
+        boss: { autoWin: false, infiniteTimes: false },
+        games: { alwaysWin: false, checkinMakeup: false }
+      }
+    }
+  }
+  const applyBossCheat = () => {
+    ensureCheats()
+    const code = normalizeCheatCode(bossCheatCode.value)
+    const cheats = player.value.cheats.boss
+    let desc = ''
+    switch (code) {
+      case 'Seven-BossWin':
+        cheats.autoWin = !cheats.autoWin
+        desc = cheats.autoWin ? 'BOSS 一键击败开启' : 'BOSS 一键击败关闭'
+        break
+      case 'Seven-BossInfinite':
+        cheats.infiniteTimes = !cheats.infiniteTimes
+        desc = cheats.infiniteTimes ? 'BOSS 无限次数开启' : 'BOSS 无限次数关闭'
+        break
+      default:
+        gameNotifys({ title: '提示', message: '作弊码无效' })
+        return
+    }
+    gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
+  }
 
   // 开始攻击
   const startFightBoss = () => {
@@ -94,17 +145,21 @@
 
   // 攻击世界boss
   const fightBoss = () => {
+    ensureCheats()
+    const battleCheats = player.value.cheats.battle
+    const bossCheats = player.value.cheats.boss
     if (player.value.level < maxLv) {
       isEnd.value = true
       stopFightBoss()
       texts.value.push(`你的境界尚未达到${levelNames(maxLv)}, ${store.boss.name}对于你的挑战不屑一顾`)
       return
     }
-    if (store.boss.health <= 0 || !store.boss.health) {
+    if ((store.boss.health <= 0 || !store.boss.health) && !bossCheats.autoWin) {
       texts.value.push('BOSS刷新时间还未到')
       return
     }
     isFighting.value = true
+    if (bossCheats.autoWin) store.boss.health = 0
     // boss伤害计算
     const monsterAttack = store.boss.attack // boss攻击
     const playerDefense = player.value.defense // 玩家防御
@@ -121,7 +176,7 @@
     // 玩家是否闪避
     const isPlayerHit = Math.random() > store.boss.dodge
     // boss是否闪避
-    const isBHit = Math.random() > player.value.dodge
+    const isBHit = battleCheats.dodge100 ? false : Math.random() > player.value.dodge
     // 检查boss是否暴击
     if (Math.random() < store.boss.critical) {
       // boss暴击，伤害加倍
@@ -130,16 +185,18 @@
       isMCritical = true
     }
     // 检查玩家是否暴击
-    if (Math.random() < player.value.critical) {
+    if (Math.random() < (battleCheats.crit100 ? 1 : player.value.critical)) {
       // 玩家暴击，伤害加倍
       playerHarm *= 1.5
       // 玩家成功暴击
       isCritical = true
     }
     // 如果玩家没有闪避，扣除玩家气血
+    if (battleCheats.godMode) monsterHarm = 0
     if (isBHit) player.value.health -= monsterHarm
     // 如果boss没有闪避，扣除boss气血
     if (isPlayerHit) store.boss.health -= playerHarm
+    if (battleCheats.oneHit) store.boss.health = 0
     player.value.health = Math.max(0, player.value.health)
     store.boss.health = Math.max(0, store.boss.health)
     if (guashaRounds.value > 1) {
@@ -241,6 +298,8 @@
 
   // 世界BOSS
   const assaultBoss = () => {
+    ensureCheats()
+    const bossCheats = player.value.cheats.boss
     // boss生成的时间
     const time = getMinuteDifference(store.boss.time)
     // boss难度根据玩家最高等级 + 转生次数
@@ -254,7 +313,7 @@
       }
       // 如果boss没有血量
     } else {
-      if (time >= 5 || store.boss.time == 0) {
+      if (bossCheats.infiniteTimes || time >= 5 || store.boss.time == 0) {
         // boss没有血量但时间大于等于5分钟，重新生成boss
         store.boss = boss.drawPrize(bossLv)
       } else {
@@ -290,5 +349,13 @@
 <style scoped>
   .boss-box .desc {
     margin: 10px 0;
+  }
+
+  .boss-cheat {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 </style>
