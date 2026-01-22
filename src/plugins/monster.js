@@ -1,4 +1,4 @@
-﻿const monsters = {
+const monsters = {
   // prettier-ignore
   monster_Names(lv) {
     const names_a = [
@@ -65,15 +65,15 @@
   },
   // 地狱模式：将基础值放大到玩家当前值的 10~50 倍。
   scaleHellValue(value) {
-    return Math.max(1, Math.floor(value * this.getRandomFloatInRange(10, 50)))
+    return Math.max(1, Math.floor(value * this.getRandomFloatInRange(3, 8)))
   },
   // 地狱模式：降低防御基础值的放大区间。
   scaleHellDefenseValue(value) {
-    return Math.max(1, Math.floor(value * this.getRandomFloatInRange(6, 18)))
+    return Math.max(1, Math.floor(value * this.getRandomFloatInRange(2, 6)))
   },
   // 地狱模式：将概率放大后限制在合理范围内。
   scaleHellRate(rate) {
-    return Math.min(0.9, Math.max(0.01, rate * this.getRandomFloatInRange(10, 50)))
+    return Math.min(0.6, Math.max(0.01, rate * this.getRandomFloatInRange(2, 6)))
   },
   // 用玩家属性调整基础值，并限制倍率区间，防止波动过大。
   adjustByPlayer(base, playerValue, minMultiplier = 0.7, maxMultiplier = 1.3) {
