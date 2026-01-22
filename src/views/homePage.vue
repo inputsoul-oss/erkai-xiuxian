@@ -1358,19 +1358,49 @@
     gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
   }
   const confirmHellMode = value => {
-    if (!value) return
-    ElMessageBox.confirm('地狱模式将显著提升难度并禁用AI难度设置，是否确认开启？', '地狱模式确认', {
-      center: true,
-      cancelButtonText: '取消',
-      confirmButtonText: '确认'
-    })
+    if (value) {
+      ElMessageBox.confirm(
+        '开启地狱模式将禁用AI难度设置，是否继续？',
+        '确认开启',
+        {
+          center: true,
+          cancelButtonText: '取消',
+          confirmButtonText: '确认'
+        }
+      )
+        .then(() => {
+          player.value.hellMode = true
+          player.value.aiDifficulty = { ...player.value.aiDifficulty, enabled: false, profile: null }
+          gameNotifys({ title: '提示', message: '已开启地狱模式' })
+        })
+        .catch(() => {
+          player.value.hellMode = false
+        })
+      return
+    }
+    ElMessageBox.confirm(
+      '关闭地狱模式会清空存档，是否继续？',
+      '确认关闭',
+      {
+        center: true,
+        cancelButtonText: '取消',
+        confirmButtonText: '继续'
+      }
+    )
+      .then(() =>
+        ElMessageBox.confirm('此操作不可恢复，确定清空存档并退出地狱模式？', '二次确认', {
+          center: true,
+          cancelButtonText: '取消',
+          confirmButtonText: '确认'
+        })
+      )
       .then(() => {
-        player.value.hellMode = true
-        player.value.aiDifficulty = { ...player.value.aiDifficulty, enabled: false, profile: null }
-        gameNotifys({ title: '提示', message: '已开启地狱模式' })
+        store.$reset()
+        player.value = store.player
+        gameNotifys({ title: '提示', message: '已清空存档并退出地狱模式' })
       })
       .catch(() => {
-        player.value.hellMode = false
+        player.value.hellMode = true
       })
   }
   const ensureAiDifficulty = () => {

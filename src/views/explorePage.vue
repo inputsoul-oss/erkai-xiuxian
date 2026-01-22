@@ -62,14 +62,14 @@
         <el-autocomplete
           v-model="battleCheatCode"
           :fetch-suggestions="queryBattleCheats"
-          placeholder="输入作弊码"
+          placeholder="Cheat code"
           clearable
         />
-        <el-button type="primary" @click="applyBattleCheat">激活</el-button>
+        <el-button type="primary" @click="applyBattleCheat">Activate</el-button>
       </div>
     </div>
     <div class="cultivate error" v-else>
-      <el-result icon="error" title="缺少对战信息" sub-title="请返回地图重新探索">
+      <el-result icon="error" title="Missing battle info" sub-title="Please return to map and try again.">
         <template #extra>
           <el-button :type="!player.dark ? 'primary' : ''" @click="router.push('/map')">返回地图</el-button>
         </template>
@@ -280,6 +280,14 @@
       autoDismantleBySettings()
     }
   }
+  const handleAutoExploreFailure = () => {
+    if (!isAutoExploreEnabled()) return false
+    player.value.autoExplore.enabled = false
+    player.value.autoExplore.autoStartCultivate = false
+    stopFight()
+    goHome()
+    return true
+  }
 
   // 玩家操作(绑定快捷键)
   const operate = oprName => {
@@ -475,7 +483,8 @@
           }
       } else if (player.value.health <= 0) {
         texts.value.push('你因为太弱被击败了。')
-        stopFight()
+        if (handleAutoExploreFailure()) return
+                stopFight()
       } else {
         // 玩家
         texts.value.push(
@@ -495,7 +504,8 @@
     } else {
       guashaRounds.value = 10
       texts.value.push(`回合结束, 你未战胜${monster.value.name}你输了。`)
-      stopFight()
+      if (handleAutoExploreFailure()) return
+            stopFight()
     }
   }
 
