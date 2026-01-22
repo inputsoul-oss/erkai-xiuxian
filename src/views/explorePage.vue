@@ -187,6 +187,10 @@
   }
   const applyBattleCheat = () => {
     ensureCheats()
+    if (!player.value.cheatsUnlocked) {
+      gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      return
+    }
     const code = normalizeCheatCode(battleCheatCode.value)
     const cheats = player.value.cheats.battle
     let desc = ''
@@ -216,7 +220,8 @@
   const needsBreakthroughKills = () =>
     player.value.level > 10 &&
     player.value.cultivation >= player.value.maxCultivation &&
-    player.value.taskNum < player.value.level
+    player.value.taskNum < player.value.level &&
+    (!player.value.hellMode || player.value.level > 100)
   const remainingBreakthroughKills = () => (needsBreakthroughKills() ? Math.max(0, player.value.level - player.value.taskNum) : 0)
   const prepareNextBattleForAi = async () => {
     guashaRounds.value = 10
@@ -228,6 +233,7 @@
     const monsterLv = level * player.value.reincarnation + level
     const nextMonster = {
       name: monsterData.monster_Names(monsterLv),
+      level: monsterLv,
       health: monsterData.monster_Health(monsterLv, player.value),
       attack: monsterData.monster_Attack(monsterLv, player.value),
       defense: monsterData.monster_Defense(monsterLv, player.value),
@@ -320,28 +326,40 @@
   const openMonsterInfo = () => {
     const successRate = calculateCaptureRate()
     const newProperties = (100 - successRate) * 0.5
-    ElMessageBox.alert('', monster.value.name, {
-      center: true,
-      message: `<div class="monsterinfo">
-      <div class="monsterinfo-box">
-        <p>境界: ${player.value.level == 0 ? levelNames(player.value.level + 1) : levelNames(player.value.level)}</p>
-        <p>悟性: ${Math.floor(newProperties)}</p>
-        <p>气血: ${formatNumberToChineseUnit(monster.value.health)}</p>
-        <p>攻击: ${formatNumberToChineseUnit(monster.value.attack)}</p>
-        <p>防御: ${formatNumberToChineseUnit(monster.value.defense)}</p>
+      ElMessageBox.alert('', monster.value.name, {
+        center: true,
+        message: `<div class="monsterinfo">
+        <div class="monsterinfo-box">
+          <p>境界: ${player.value.level == 0 ? levelNames(player.value.level + 1) : levelNames(player.value.level)}</p>
+          <p>基础等级: ${monster.value.level ?? 0}</p>
+          <p>悟性: ${Math.floor(newProperties)}</p>
+          <p>气血上限: ${formatNumberToChineseUnit(monster.value.maxHealth ?? monster.value.health)}</p>
+          <p>气血: ${formatNumberToChineseUnit(monster.value.health)}</p>
+          <p>攻击: ${formatNumberToChineseUnit(monster.value.attack)}</p>
+          <p>防御: ${formatNumberToChineseUnit(monster.value.defense)}</p>
         <p>闪避率: ${
           monster.value.dodge > 0 ? (monster.value.dodge * 100 > 100 ? 100 : (monster.value.dodge * 100).toFixed(2)) : 0
-        }%</p>
-        <p>暴击率: ${
-          monster.value.critical > 0
-            ? monster.value.critical * 100 > 100
-              ? 100
-              : (monster.value.critical * 100).toFixed(2)
-            : 0
-        }%</p>
-        <p>收服率: ${successRate}%</p>
-      </div>
-    </div>`,
+          }%</p>
+          <p>暴击率: ${
+            monster.value.critical > 0
+              ? monster.value.critical * 100 > 100
+                ? 100
+                : (monster.value.critical * 100).toFixed(2)
+              : 0
+          }%</p>
+          <p>评分: ${formatNumberToChineseUnit(
+            equip.calculateEquipmentScore(
+              monster.value.dodge,
+              monster.value.attack,
+              monster.value.health,
+              monster.value.critical,
+              monster.value.defense
+            )
+          )}</p>
+          <p>掉落率: 100%</p>
+          <p>收服率: ${successRate}%</p>
+        </div>
+      </div>`,
       confirmButtonText: '知道了',
       dangerouslyUseHTMLString: true
     }).catch(() => {})
@@ -581,12 +599,13 @@
   const findTreasure = () => {
     let equipItem = {}
     let exp = Math.floor(player.value.maxCultivation / 100)
+    if (player.value.hellMode) exp = Math.floor(exp / 2)
     exp = exp ? exp : 1
     // 如果总背包容量大于装备背包容量
     victory.value = true
     const randomInt = equip.getRandomInt(1, 4)
     ensureCheats()
-    const forceTopDrop = player.value.cheats.explore.forceTopDrop
+    const forceTopDrop = player.value.cheats.explore.forceTopDrop || player.value.hellMode
     // 神兵
     if (randomInt == 1) equipItem = equip.equip_Weapons(player.value.level, false, forceTopDrop)
     // 护甲
@@ -615,7 +634,8 @@
       if (player.value.level < maxLv) {
         if (player.value.cultivation >= player.value.maxCultivation) {
           // 如果玩家等级大于10并且击杀数低于当前等级
-          if (player.value.level > 10 && player.value.level > player.value.taskNum) {
+          const requireExplore = !player.value.hellMode || player.value.level > 100
+          if (requireExplore && player.value.level > 10 && player.value.level > player.value.taskNum) {
             texts.value.push(
               `当前境界修为已满, 你需要通过击败<span class="textColor">(${player.value.taskNum} / ${player.value.level})</span>个敌人证道突破`
             )

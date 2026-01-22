@@ -65,7 +65,8 @@ export const propItemNames = {
   qingyuan: { name: '情缘', desc: '可以通过赠送礼物给NPC获得' },
   currency: { name: '鸿蒙石', desc: '可以通过击败世界BOSS获得' },
   cultivateDan: { name: '培养丹', desc: '可以通过探索获得' },
-  strengtheningStone: { name: '炼器石', desc: '可以通过分解装备获得' }
+  strengtheningStone: { name: '炼器石', desc: '可以通过分解装备获得' },
+  attributePill: { name: '属性丸', desc: '地狱模式修炼时有概率获得，可随机提升属性' }
 }
 
 export const formatNumberToChineseUnit = number => {

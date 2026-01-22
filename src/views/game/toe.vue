@@ -95,7 +95,7 @@
 
   // 计算下次游戏可用时间
   const nextGameTime = computed(() => {
-    return player.value.nextGameTimes?.ticTacToe || 0
+    return player.value.hellMode ? 0 : player.value.nextGameTimes?.ticTacToe || 0
   })
 
   // 判断玩家是否有足够的钱
@@ -172,7 +172,7 @@
     gameEnded.value = true
     const reward = playerWon ? 1000 : -1000
     emit('game-result', { success: playerWon, reward })
-    const newNextGameTime = Date.now() + 10 * 60 * 1000
+    const newNextGameTime = player.value.hellMode ? Date.now() : Date.now() + 10 * 60 * 1000
     player.value.nextGameTimes.ticTacToe = newNextGameTime
     emit('update-next-game-time', {
       game: 'ticTacToe',

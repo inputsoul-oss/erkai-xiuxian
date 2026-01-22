@@ -48,7 +48,7 @@
   const emit = defineEmits(['game-result', 'update-next-game-time'])
 
   const nextGameTime = computed(() => {
-    return player.value.nextGameTimes?.rps || 0
+    return player.value.hellMode ? 0 : player.value.nextGameTimes?.rps || 0
   })
 
   const hasEnoughMoney = computed(() => {
@@ -79,7 +79,7 @@
       player.value.props.money -= reward
     }
     emit('game-result', { success: won, reward })
-    const newNextGameTime = Date.now() + 10 * 60 * 1000
+    const newNextGameTime = player.value.hellMode ? Date.now() : Date.now() + 10 * 60 * 1000
     player.value.nextGameTimes.rps = newNextGameTime
     emit('update-next-game-time', {
       game: 'rps',

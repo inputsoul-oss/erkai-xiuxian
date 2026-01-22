@@ -37,7 +37,8 @@ export const useMainStore = defineStore('main', {
         rootBone: 0,
         currency: 0,
         cultivateDan: 0,
-        strengtheningStone: 0
+        strengtheningStone: 0,
+        attributePill: 0
       },
       score: 0,
       level: 0,
@@ -47,6 +48,8 @@ export const useMainStore = defineStore('main', {
       health: 100,
       critical: 0,
       defense: 10,
+      hellMode: false,
+      cheatsUnlocked: false,
       taskNum: 0,
       version: 1.1,
       currency: 0,

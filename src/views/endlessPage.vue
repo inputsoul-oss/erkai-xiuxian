@@ -34,10 +34,10 @@
       <el-autocomplete
         v-model="endlessCheatCode"
         :fetch-suggestions="queryEndlessCheats"
-        placeholder="输入作弊码"
+        placeholder="输入作弊�?
         clearable
       />
-      <el-button type="primary" @click="applyEndlessCheat">激活</el-button>
+      <el-button type="primary" @click="applyEndlessCheat">激�?/el-button>
     </div>
     <div class="sweep-info">
       <el-row>
@@ -128,28 +128,32 @@
   }
   const applyEndlessCheat = () => {
     ensureCheats()
+    if (!player.value.cheatsUnlocked) {
+      gameNotifys({ title: '提示', message: '请先在主页输�?Iamuseless 解锁作弊�? })
+      return
+    }
     const code = normalizeCheatCode(endlessCheatCode.value)
     const cheats = player.value.cheats.battle
     let desc = ''
     switch (code) {
       case 'Seven-God':
         cheats.godMode = !cheats.godMode
-        desc = cheats.godMode ? '无敌开启' : '无敌关闭'
+        desc = cheats.godMode ? '无敌开�? : '无敌关闭'
         break
       case 'Seven-OneHit':
         cheats.oneHit = !cheats.oneHit
-        desc = cheats.oneHit ? '秒杀开启' : '秒杀关闭'
+        desc = cheats.oneHit ? '秒杀开�? : '秒杀关闭'
         break
       case 'Seven-Crit':
         cheats.crit100 = !cheats.crit100
-        desc = cheats.crit100 ? '暴击 100% 开启' : '暴击 100% 关闭'
+        desc = cheats.crit100 ? '暴击 100% 开�? : '暴击 100% 关闭'
         break
       case 'Seven-Dodge':
         cheats.dodge100 = !cheats.dodge100
-        desc = cheats.dodge100 ? '闪避 100% 开启' : '闪避 100% 关闭'
+        desc = cheats.dodge100 ? '闪避 100% 开�? : '闪避 100% 关闭'
         break
       default:
-        gameNotifys({ title: '提示', message: '作弊码无效' })
+        gameNotifys({ title: '提示', message: '作弊码无�? })
         return
     }
     gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
@@ -167,17 +171,12 @@
   const isSweeping = ref(false)
   // 扫荡结果
   const sweepResults = ref({
-    // 获得的修为
-    expGain: 0,
-    // 获得的灵石
-    moneyGain: 0,
-    // 获得的装备数量
-    equipmentGained: 0
+    // 获得的修�?    expGain: 0,
+    // 获得的灵�?    moneyGain: 0,
+    // 获得的装备数�?    equipmentGained: 0
   })
-  // 玩家气血状态
-  const playerStatus = ref('success')
-  // 怪物气血状态
-  const monsterStatus = ref('success')
+  // 玩家气血状�?  const playerStatus = ref('success')
+  // 怪物气血状�?  const monsterStatus = ref('success')
   // 扫荡时间间隔
   const sweepInterval = ref(null)
   // 是否自动战斗
@@ -222,7 +221,7 @@
         disabled: isSweeping.value || isAutoFighting.value || !monster.value || player.value.health <= 0
       },
       {
-        text: isSweeping.value ? '停止扫荡' : '开始扫荡',
+        text: isSweeping.value ? '停止扫荡' : '开始扫�?,
         click: () => toggleSweep(),
         disabled: isAutoFighting.value || player.value.health <= 0
       },
@@ -249,8 +248,7 @@
     }
   )
 
-  // 监听玩家血量变化
-  watch(
+  // 监听玩家血量变�?  watch(
     () => player.value.health,
     () => {
       const { health, maxHealth } = player.value
@@ -258,8 +256,7 @@
     }
   )
 
-  // 监听怪物血量变化
-  watch(
+  // 监听怪物血量变�?  watch(
     () => monster.value?.health,
     () => {
       if (monster.value) {
@@ -281,8 +278,7 @@
     return `${Math.max(0, health)} / ${Math.max(0, maxHealth)}`
   }
 
-  // 动态修改血量状态
-  const getStatus = (health, maxHealth) => {
+  // 动态修改血量状�?  const getStatus = (health, maxHealth) => {
     const num = (health / maxHealth) * 100
     return num >= 70 ? 'success' : num >= 30 ? 'warning' : 'exception'
   }
@@ -296,8 +292,7 @@
       name: monsters.monster_Names(level),
       // 等级
       level,
-      // 闪避率
-      dodge: monsters.monster_DodgeRate(level, player.value),
+      // 闪避�?      dodge: monsters.monster_DodgeRate(level, player.value),
       // 攻击
       attack: monsters.monster_Attack(level, player.value),
       // 气血
@@ -306,12 +301,11 @@
       defense: monsters.monster_Defense(level, player.value),
       // 最大气血
       maxHealth: monsters.monster_Health(level, player.value),
-      // 暴击率
-      critical: monsters.monster_Criticalhitrate(level, player.value)
+      // 暴击�?      critical: monsters.monster_Criticalhitrate(level, player.value)
     }
     monster.value = await applyAiDifficultyToMonster(baseMonster)
     // 日志
-    battleLogs.value.push(`你遇到了本层的守护者: ${monster.value.name}`)
+    battleLogs.value.push(`你遇到了本层的守护�? ${monster.value.name}`)
   }
   // 打开双方信息弹窗
   const openInfo = type => {
@@ -321,15 +315,21 @@
       center: true,
       message: `<div class="monsterinfo">
       <div class="monsterinfo-box">
+      ${isPlayer ? '' : `<p>�����ȼ�: ${info.level}</p>`}
+      ${isPlayer ? '' : `<p>气血上限: ${formatNumberToChineseUnit(info.maxHealth)}</p>`}
       <p>气血: ${formatNumberToChineseUnit(info.health)}</p>
       <p>攻击: ${formatNumberToChineseUnit(info.attack)}</p>
       <p>防御: ${formatNumberToChineseUnit(info.defense)}</p>
-      <p>闪避率: ${info.dodge > 0 ? (info.dodge * 100 > 100 ? 100 : (info.dodge * 100).toFixed(2)) : 0}%</p>
-      <p>暴击率: ${info.critical > 0 ? (info.critical * 100 > 100 ? 100 : (info.critical * 100).toFixed(2)) : 0}%</p>
+      <p>闪避�? ${info.dodge > 0 ? (info.dodge * 100 > 100 ? 100 : (info.dodge * 100).toFixed(2)) : 0}%</p>
+      <p>暴击�? ${info.critical > 0 ? (info.critical * 100 > 100 ? 100 : (info.critical * 100).toFixed(2)) : 0}%</p>
+      ${isPlayer ? '' : `<p>评分: ${formatNumberToChineseUnit(
+        equip.calculateEquipmentScore(info.dodge, info.attack, info.health, info.critical, info.defense)
+      )}</p>`}
+      ${isPlayer ? '' : `<p>掉落�? 100%</p>`}
       </div>
     </div>`,
       showCancelButton: false,
-      confirmButtonText: '知道了',
+      confirmButtonText: '知道�?,
       dangerouslyUseHTMLString: true
     }).catch(() => {})
   }
@@ -338,8 +338,7 @@
   const fight = () => {
     ensureCheats()
     const battleCheats = player.value.cheats.battle
-    // 被击败
-    if (player.value.health <= 0) {
+    // 被击�?    if (player.value.health <= 0) {
       handlePlayerDefeat()
       return
     }
@@ -355,8 +354,7 @@
     // 玩家攻击怪物
     const playerAttackResult = combatSystem.executeCombatRound(player.value, monster.value)
     generateCombatLog(player.value.name, monster.value.name, playerAttackResult)
-    // 检查怪物是否被击败
-    if (monster.value.health <= 0) {
+    // 检查怪物是否被击�?    if (monster.value.health <= 0) {
       player.value.critical = originalCrit
       player.value.dodge = originalDodge
       handleMonsterDefeat()
@@ -375,8 +373,7 @@
     if (battleCheats.godMode) player.value.health = player.value.maxHealth
     player.value.critical = originalCrit
     player.value.dodge = originalDodge
-    // 玩家是否被击败
-    if (player.value.health <= 0) {
+    // 玩家是否被击�?    if (player.value.health <= 0) {
       handlePlayerDefeat()
     }
   }
@@ -385,9 +382,9 @@
     if (!result.isHit) {
       battleLogs.value.push(`${attackerName}的攻击被${defenderName}闪避了。`)
     } else {
-      let logMessage = `${attackerName}对${defenderName}造成了${result.damage}点伤害`
-      if (result.isCritical) logMessage += '（暴击！）'
-      logMessage += `，${defenderName}剩余${result.remainingHealth}气血。`
+      let logMessage = `${attackerName}�?{defenderName}造成�?{result.damage}点伤害`
+      if (result.isCritical) logMessage += '（暴击！�?
+      logMessage += `�?{defenderName}剩余${result.remainingHealth}气血。`
       battleLogs.value.push(logMessage)
     }
   }
@@ -395,7 +392,7 @@
   // 处理怪物被击败的情况
   const handleMonsterDefeat = () => {
     // 修为
-    const expGain = Math.floor(monster.value.level * 100)
+    const expGain = Math.floor(monster.value.level * 100 * (player.value.hellMode ? 0.5 : 1))
     // 灵石
     const moneyGain = Math.floor(monster.value.level * 2)
     // 增加修为
@@ -404,21 +401,19 @@
     player.value.props.money += moneyGain
     // 日志
     battleLogs.value.push(`你击败了 ${monster.value.name}！`)
-    battleLogs.value.push(`获得了 ${expGain}点修为和 ${moneyGain}灵石`)
+    battleLogs.value.push(`获得�?${expGain}点修为和 ${moneyGain}灵石`)
     // 随机获得装备
     getRandomEquipment()
     // 增加层数
     currentFloor.value++
-    // 检查是否是10的倍数层，且之前没有获得过该层的奖励
-    if (currentFloor.value % 5 === 0 && !player.value.rewardedTowerFloors.includes(currentFloor.value)) {
+    // 检查是否是10的倍数层，且之前没有获得过该层的奖�?    if (currentFloor.value % 5 === 0 && !player.value.rewardedTowerFloors.includes(currentFloor.value)) {
       player.value.props.cultivateDan += 500
       player.value.rewardedTowerFloors.push(currentFloor.value)
-      battleLogs.value.push(`恭喜你通过第 ${currentFloor.value} 层，获得额外奖励：500培养丹！`)
+      battleLogs.value.push(`恭喜你通过�?${currentFloor.value} 层，获得额外奖励�?00培养丹！`)
     }
-    // 如果当前层数大于最高层数
-    if (currentFloor.value > player.value.highestTowerFloor) player.value.highestTowerFloor = currentFloor.value
+    // 如果当前层数大于最高层�?    if (currentFloor.value > player.value.highestTowerFloor) player.value.highestTowerFloor = currentFloor.value
     // 日志
-    battleLogs.value.push(`成功通过第 ${currentFloor.value - 1} 层，自动前往第 ${currentFloor.value} 层`)
+    battleLogs.value.push(`成功通过�?${currentFloor.value - 1} 层，自动前往�?${currentFloor.value} 层`)
     // 生成新的怪物（下一层）
     generateMonster()
   }
@@ -426,7 +421,7 @@
   // 处理玩家被击败的情况
   const handlePlayerDefeat = () => {
     // 日志
-    battleLogs.value.push('你被击败了！挑战结束。')
+    battleLogs.value.push('你被击败了！挑战结束�?)
     battleLogs.value.push(`${monster.value.name}: ${boss.drawPrize(monster.value.level).text}`)
     // 关闭自动战斗
     isAutoFighting.value = false
@@ -438,8 +433,7 @@
     // 停止扫荡
     stopSweep()
   }
-  // 切换自动战斗状态
-  const toggleAutoFight = () => {
+  // 切换自动战斗状�?  const toggleAutoFight = () => {
     if (!isAutoFighting.value) stopAiAssist()
     isAutoFighting.value = !isAutoFighting.value
     // 启动自动战斗
@@ -474,7 +468,7 @@
     let exp = Math.floor(player.value.maxCultivation / 100)
     exp = exp ? exp : 1
     ensureCheats()
-    const forceTopDrop = player.value.cheats.explore.forceTopDrop
+    const forceTopDrop = player.value.cheats.explore.forceTopDrop || player.value.hellMode
     const randomInt = equip.getRandomInt(1, 4)
     // 神兵
     if (randomInt == 1) equipItem = equip.equip_Weapons(player.value.level, false, forceTopDrop)
@@ -485,18 +479,16 @@
     // 法器
     else if (randomInt == 4) equipItem = equip.equip_Sutras(player.value.level, false, forceTopDrop)
     battleLogs.value.push(
-      `你发现了一个宝箱，打开后获得${levels[equipItem.quality]}${equipItem.name}(${genre[equipItem.type]})`
+      `你发现了一个宝箱，打开后获�?{levels[equipItem.quality]}${equipItem.name}(${genre[equipItem.type]})`
     )
     // 如果背包满了就不增加装备
     if (player.value.inventory.length >= player.value.backpackCapacity)
-      battleLogs.value.push(`当前装备背包容量已满, 该装备自动丢弃, 转生可增加背包容量`)
+      battleLogs.value.push(`当前装备背包容量已满, 该装备自动丢�? 转生可增加背包容量`)
     else player.value.inventory.push(equipItem)
   }
 
-  // 切换扫荡状态
-  const toggleSweep = () => {
-    // 扫荡状态
-    isSweeping.value = !isSweeping.value
+  // 切换扫荡状�?  const toggleSweep = () => {
+    // 扫荡状�?    isSweeping.value = !isSweeping.value
     if (isSweeping.value) {
       stopAiAssist()
       // 重置扫荡时间
@@ -505,8 +497,7 @@
       sweepResults.value = { expGain: 0, moneyGain: 0, equipmentGained: 0 }
       // 设定每秒更新扫荡时间
       sweepInterval.value = setInterval(sweep.value, 1000)
-      // 每30秒进行一次战斗
-      sweepFightInterval.value = setInterval(sweepFight.value, 30000)
+      // �?0秒进行一次战�?      sweepFightInterval.value = setInterval(sweepFight.value, 30000)
     } else {
       // 停止扫荡
       stopSweep()
@@ -582,16 +573,16 @@
       try {
         decision = await generateBattleDecision(createBattleState())
       } catch (error) {
-        battleLogs.value.push('智谱托管失败，已切换为手动对战。')
+        battleLogs.value.push('智谱托管失败，已切换为手动对战�?)
         stopAiAssist()
         break
       } finally {
         aiBusy.value = false
       }
       if (!isAiAssist.value || aiAbort.value) break
-      if (decision?.reason) battleLogs.value.push(`智谱建议：${decision.reason}`)
+      if (decision?.reason) battleLogs.value.push(`智谱建议�?{decision.reason}`)
       if (decision?.action === 'retreat') {
-        battleLogs.value.push('智谱选择撤退。')
+        battleLogs.value.push('智谱选择撤退�?)
         stopAiAssist()
         retreat()
         break
@@ -607,29 +598,25 @@
   const sweep = () => {
     // 增加扫荡时间
     sweepTime.value++
-    // 60秒更新一次日志
-    if (sweepTime.value % 60 === 0)
+    // 60秒更新一次日�?    if (sweepTime.value % 60 === 0)
       battleLogs.value.push(
-        `扫荡结果：目前已扫荡${formatTime(sweepTime.value)}，恭喜你获得了${sweepResults.value.expGain}点修为，${
+        `扫荡结果：目前已扫荡${formatTime(sweepTime.value)}，恭喜你获得�?{sweepResults.value.expGain}点修为，${
           sweepResults.value.moneyGain
-        }灵石和${sweepResults.value.equipmentGained}件装备。`
+        }灵石�?{sweepResults.value.equipmentGained}件装备。`
       )
   }
 
   // 扫荡战斗
   const sweepFight = () => {
-    // 根据当前层数计算获得经验值
-    const expGain = Math.floor(currentFloor.value * 10)
+    // 根据当前层数计算获得经验�?    const expGain = Math.floor(currentFloor.value * 10 * (player.value.hellMode ? 0.5 : 1))
     // 根据当前层数计算获得灵石
     const moneyGain = Math.floor(currentFloor.value * 10)
     // 增加玩家修为
     player.value.cultivation += expGain
     // 增加玩家灵石
     player.value.props.money += moneyGain
-    // 增加击杀数
-    player.value.jishaNum++
-    // 更新扫荡结果中的经验值
-    sweepResults.value.expGain += expGain
+    // 增加击杀�?    player.value.jishaNum++
+    // 更新扫荡结果中的经验�?    sweepResults.value.expGain += expGain
     // 更新扫荡结果中的灵石
     sweepResults.value.moneyGain += moneyGain
     // 10% 概率获得装备
@@ -640,7 +627,7 @@
     }
     // 日志
     battleLogs.value.push(
-      `扫荡结果：恭喜你获得了${expGain}点修为，${moneyGain}块灵石${equipmentGained ? '和1件装备' : '。'}`
+      `扫荡结果：恭喜你获得�?{expGain}点修为，${moneyGain}块灵�?{equipmentGained ? '�?件装�? : '�?}`
     )
   }
 
@@ -677,8 +664,7 @@
   onMounted(() => {
     ensureCheats()
     ensureAiDifficulty()
-    //检查成就
-    const newAchievements = checkAchievements(player.value, 'monster')
+    //检查成�?    const newAchievements = checkAchievements(player.value, 'monster')
     newAchievements.forEach(achievement => {
       gameNotifys({
         title: '获得成就提示',
@@ -689,7 +675,7 @@
     currentFloor.value = player.value.highestTowerFloor > 1 ? player.value.highestTowerFloor - 1 : 1
     // 生成日志
     battleLogs.value.push(
-      `欢迎来到无尽塔, 这里是无尽塔的第${currentFloor.value}层, 你的爬塔最高记录为${player.value.highestTowerFloor}层`
+      `欢迎来到无尽�? 这里是无尽塔的第${currentFloor.value}�? 你的爬塔最高记录为${player.value.highestTowerFloor}层`
     )
     // 生成怪物
     generateMonster()
@@ -790,3 +776,4 @@
     }
   }
 </style>
+

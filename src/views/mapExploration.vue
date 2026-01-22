@@ -726,6 +726,8 @@
         store.monster = {
           // 名称
           name: monster.monster_Names(monsterLv),
+          // 基础等级
+          level: monsterLv,
           // 气血
           health: monster.monster_Health(monsterLv, player.value),
           // 攻击
@@ -773,6 +775,10 @@
 
   const applyExploreCheat = () => {
     ensureCheats()
+    if (!player.value.cheatsUnlocked) {
+      gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      return
+    }
     const code = normalizeCheatCode(exploreCheatCode.value)
     const cheats = player.value.cheats.explore
     let desc = ''

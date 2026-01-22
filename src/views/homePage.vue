@@ -303,11 +303,7 @@
             <el-tab-pane label="道具" name="props">
               <div class="inventory-content">
                 <template v-for="(item, index) in sortedProps" :key="index">
-                  <tag
-                    type="primary"
-                    class="inventory-item"
-                    @click="gameNotifys({ title: '获得方式', message: propItemNames[item.name].desc })"
-                  >
+                  <tag type="primary" class="inventory-item" @click="onPropClick(item)">
                     {{ propItemNames[item.name].name }}({{ item.num }})
                   </tag>
                 </template>
@@ -981,8 +977,8 @@
         <el-button class="dialog-footer-button" @click="sellingPet">放生灵宠</el-button>
       </div>
     </el-dialog>
-    <el-dialog v-model="show" :lock-scroll="false" title="游戏设置" width="350px">
-      <div class="dialog-footer">
+      <el-dialog v-model="show" :lock-scroll="false" title="游戏设置" width="350px">
+        <div class="dialog-footer">
         <el-divider>存档相关</el-divider>
         <el-button type="info" class="dialog-footer-button" @click="exportData">导出存档</el-button>
         <el-upload
@@ -1006,11 +1002,12 @@
           <el-button type="danger" class="dialog-footer-button">导入脚本</el-button>
         </el-upload>
         <el-button type="warning" class="dialog-footer-button" @click="deleteScriptData">删除脚本</el-button>
-        <el-divider>其他相关</el-divider>
-        <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
-        <el-button class="dialog-footer-button" @click="showCheatHints">作弊码提示</el-button>
-        <el-button class="dialog-footer-button" @click="openAiDifficultySettings">AI难度设置</el-button>
-        <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
+          <el-divider>其他相关</el-divider>
+          <el-checkbox v-model="player.hellMode" @change="confirmHellMode">地狱模式</el-checkbox>
+          <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
+          <el-button class="dialog-footer-button" @click="showCheatHints">作弊码提示</el-button>
+          <el-button class="dialog-footer-button" @click="openAiDifficultySettings">AI难度设置</el-button>
+          <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
         <el-button type="success" class="dialog-footer-button" @click="copyContent('url')">开源地址</el-button>
         <el-divider>当前版本为: {{ ver }}</el-divider>
       </div>
@@ -1239,6 +1236,7 @@
     })
   const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
   const homeCheatOptions = [
+    'Iamuseless',
     'Seven-Money',
     'Seven-Dan',
     'Seven-Stone',
@@ -1252,7 +1250,7 @@
   const queryHomeCheats = (query, cb) => {
     const q = normalizeCheatCode(query)
     if (!q.startsWith('Seven')) return cb([])
-    cb(homeCheatOptions.filter(item => item.includes(q)).map(item => ({ value: item })))
+    cb(homeCheatOptions.filter(item => item.includes(q) && item !== 'Iamuseless').map(item => ({ value: item })))
   }
   const queryEnhanceCheats = (query, cb) => {
     const q = normalizeCheatCode(query)
@@ -1260,6 +1258,12 @@
     cb(['Seven'].filter(item => item.includes(q)).map(item => ({ value: item })))
   }
   const applyEnhanceCheatCode = () => {
+    if (!player.value.cheatsUnlocked) {
+      if (!player.value.hellMode) {
+        gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      }
+      return
+    }
     if (normalizeCheatCode(enhanceCheatCode.value) === 'Seven') {
       enhanceCheatEnabled.value = true
       gameNotifys({ title: '提示', message: '作弊码生效：炼器成功率 100%' })
@@ -1290,9 +1294,19 @@
   const applyHomeCheatCode = () => {
     ensureCheats()
     const code = normalizeCheatCode(homeCheatCode.value)
+    if (code !== 'Iamuseless' && !player.value.cheatsUnlocked) {
+      if (!player.value.hellMode) {
+        gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      }
+      return
+    }
     const reward = 1000000
     let desc = ''
     switch (code) {
+      case 'Iamuseless':
+        player.value.cheatsUnlocked = true
+        gameNotifys({ title: '提示', message: '作弊码已解锁' })
+        return
       case 'Seven-Money':
         player.value.props.money += reward
         desc = '灵石 +1,000,000'
@@ -1343,6 +1357,22 @@
     }
     gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
   }
+  const confirmHellMode = value => {
+    if (!value) return
+    ElMessageBox.confirm('地狱模式将显著提升难度并禁用AI难度设置，是否确认开启？', '地狱模式确认', {
+      center: true,
+      cancelButtonText: '取消',
+      confirmButtonText: '确认'
+    })
+      .then(() => {
+        player.value.hellMode = true
+        player.value.aiDifficulty = { ...player.value.aiDifficulty, enabled: false, profile: null }
+        gameNotifys({ title: '提示', message: '已开启地狱模式' })
+      })
+      .catch(() => {
+        player.value.hellMode = false
+      })
+  }
   const ensureAiDifficulty = () => {
     if (!player.value.aiDifficulty) {
       player.value.aiDifficulty = {
@@ -1360,6 +1390,10 @@
   }
   const openAiDifficultySettings = () => {
     ensureAiDifficulty()
+    if (player.value.hellMode) {
+      gameNotifys({ title: '提示', message: '地狱模式下无法使用AI难度设置' })
+      return
+    }
     const current = player.value.aiDifficulty
     aiDifficultyForm.enabled = !!current.enabled
     aiDifficultyForm.baseUrl = current.baseUrl || ''
@@ -1373,11 +1407,11 @@
   const saveAiDifficultySettings = () => {
     ensureAiDifficulty()
     player.value.aiDifficulty = {
-      enabled: !!aiDifficultyForm.enabled,
+      enabled: player.value.hellMode ? false : !!aiDifficultyForm.enabled,
       baseUrl: aiDifficultyForm.baseUrl?.trim() || '',
       apiKey: aiDifficultyForm.apiKey?.trim() || '',
       model: aiDifficultyForm.model?.trim() || '',
-      profile: player.value.aiDifficulty?.profile || null,
+      profile: player.value.hellMode ? null : player.value.aiDifficulty?.profile || null,
       applyTo: {
         explore: !!aiDifficultyForm.applyTo.explore,
         boss: !!aiDifficultyForm.applyTo.boss,
@@ -1441,6 +1475,7 @@
         }
         const message = `
         <div class="monsterinfo"><div class="monsterinfo-box">
+            ${player.value.hellMode ? '' : '<p>解锁: Iamuseless (解锁全部作弊码)</p>'}
           <p>资源: Seven-Money / Seven-Dan / Seven-Stone / Seven-Root (各+1,000,000)</p>
           <p>背包: Seven-BagDouble / Seven-UnlockAll</p>
           <p>宠物: Seven-PetLevel(+10) / Seven-PetRoot(+50%) / Seven-PetFavor(+1000)</p>
@@ -1844,6 +1879,62 @@
   const sellingEquipmentDataChange = val => {
     player.value.sellingEquipmentData = val
   }
+  const onPropClick = item => {
+    if (item.name !== 'attributePill') {
+      gameNotifys({ title: '获得方式', message: propItemNames[item.name].desc })
+      return
+    }
+    if (!player.value.hellMode) {
+      gameNotifys({ title: '提示', message: '仅地狱模式可使用属性丸' })
+      return
+    }
+    if (item.num <= 0) {
+      gameNotifys({ title: '提示', message: '属性丸不足' })
+      return
+    }
+    const roll = Math.random()
+    const percent = (min, max) => min + Math.random() * (max - min)
+    let desc = ''
+    if (roll < 0.6) {
+      const addPercent = percent(0.01, 0.05)
+      const add = Math.floor(player.value.maxHealth * addPercent)
+      player.value.maxHealth += add
+      player.value.health += add
+      desc = `气血 +${Math.round(addPercent * 100)}%`
+    } else if (roll < 0.8) {
+      const addPercent = percent(0.01, 0.05)
+      const add = Math.floor(player.value.attack * addPercent)
+      player.value.attack += add
+      desc = `攻击 +${Math.round(addPercent * 100)}%`
+    } else if (roll < 0.9) {
+      const addPercent = percent(0.01, 0.05)
+      const add = Math.floor(player.value.defense * addPercent)
+      player.value.defense += add
+      desc = `防御 +${Math.round(addPercent * 100)}%`
+    } else if (roll < 0.95) {
+      const addRate = percent(0.005, 0.01)
+      if (player.value.dodge >= 1) {
+        player.value.critical += addRate
+        desc = `暴击 +${(addRate * 100).toFixed(2)}%`
+      } else {
+        player.value.dodge = Math.min(1, player.value.dodge + addRate)
+        desc = `闪避 +${(addRate * 100).toFixed(2)}%`
+      }
+    } else {
+      const addRate = percent(0.005, 0.01)
+      player.value.critical += addRate
+      desc = `暴击 +${(addRate * 100).toFixed(2)}%`
+    }
+    player.value.props.attributePill -= 1
+    player.value.score = equip.calculateEquipmentScore(
+      player.value.dodge,
+      player.value.attack,
+      player.value.maxHealth,
+      player.value.critical,
+      player.value.defense
+    )
+    gameNotifys({ title: '属性丸生效', message: desc })
+  }
 
   // 刷新商店
   const refreshShop = () => {
@@ -2168,14 +2259,20 @@
   }
   // 计算炼器成功概率
   const calculateEnhanceSuccessRate = item => {
-    if (enhanceCheatEnabled.value) return 1
-    // 基础成功率
-    let baseSuccessRate = 1
-    // 每级降低成功率
-    let decrementPerLevel = 0.03
-    // 炼器增幅
-    // 最终成功率
-    return baseSuccessRate - (item.strengthen * decrementPerLevel - (increase.value ? 0.1 : 0))
+    let rate = 1
+    if (enhanceCheatEnabled.value) {
+      rate = 1
+    } else {
+      // 基础成功率
+      let baseSuccessRate = 1
+      // 每级降低成功率
+      let decrementPerLevel = 0.03
+      // 炼器增幅
+      // 最终成功率
+      rate = baseSuccessRate - (item.strengthen * decrementPerLevel - (increase.value ? 0.1 : 0))
+    }
+    if (player.value.hellMode) rate *= 0.5
+    return Math.max(0, rate)
   }
   // 灵宠升级
   const petUpgrade = item => {
@@ -2452,6 +2549,12 @@
       .catch(() => {})
   }
   const applyNewbieCheatCode = () => {
+    if (!player.value.cheatsUnlocked) {
+      if (!player.value.hellMode) {
+        gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      }
+      return
+    }
     if (newBieCheatCode.value.trim() === 'Seven') {
       newBieCheatEnabled.value = true
       gameNotifys({ title: '提示', message: '作弊码生效：顶级装备概率提升至 100%' })

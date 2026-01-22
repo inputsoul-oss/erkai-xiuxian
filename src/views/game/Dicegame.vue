@@ -36,7 +36,7 @@
   })
 
   const nextGameTime = computed(() => {
-    return player.value.nextGameTimes?.dice || 0
+    return player.value.hellMode ? 0 : player.value.nextGameTimes?.dice || 0
   })
 
   const updateCanBet = () => {
@@ -86,7 +86,7 @@
     }
     gameNotifys({ title: `骰子点数: ${dice}`, message: won ? `恭喜您赢得了${reward}灵石！` : '很遗憾，您输了。' })
     emit('game-result', { success: won, reward })
-    const newNextGameTime = Date.now() + 10 * 60 * 1000
+    const newNextGameTime = player.value.hellMode ? Date.now() : Date.now() + 10 * 60 * 1000
     player.value.nextGameTimes.dice = newNextGameTime
     emit('update-next-game-time', { game: 'dice', time: newNextGameTime })
     isRolling.value = false

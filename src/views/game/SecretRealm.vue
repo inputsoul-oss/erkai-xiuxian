@@ -56,7 +56,7 @@
   })
 
   const nextExploreTime = computed(() => {
-    return player.value.nextGameTimes.secretrealm
+    return player.value.hellMode ? 0 : player.value.nextGameTimes.secretrealm
   })
 
   const initializeBoard = () => {
@@ -114,7 +114,7 @@
     }
     if (movesLeft.value <= 0) {
       gameOver.value = true
-      player.value.nextGameTimes.secretrealm = Date.now() + 120 * 60 * 1000
+      player.value.nextGameTimes.secretrealm = player.value.hellMode ? Date.now() : Date.now() + 120 * 60 * 1000
     }
   }
 
@@ -158,7 +158,7 @@
       {
         name: '灵感顿悟',
         effect: () => {
-          player.value.cultivation += 100
+          player.value.cultivation += player.value.hellMode ? 50 : 100
         }
       },
       {

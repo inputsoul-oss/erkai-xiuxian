@@ -80,6 +80,9 @@ const buildRequestBody = (config, payload) => {
 }
 
 export const generateAiDifficultyProfile = async (config, player) => {
+  if (player?.hellMode) {
+    return { ok: false, message: '地狱模式下禁用AI难度' }
+  }
   if (!config?.baseUrl || !config?.apiKey || !config?.model) {
     return { ok: false, message: '配置不完整' }
   }
@@ -198,6 +201,7 @@ export const testAiDifficulty = async config => {
 }
 
 export const applyAiDifficulty = async ({ player, monster, mode, config }) => {
+  if (player?.hellMode) return monster
   if (!config?.enabled || !config?.baseUrl || !config?.apiKey || !config?.model) return monster
   if (!config?.applyTo?.[mode]) return monster
   if (config?.profile?.multipliers) {

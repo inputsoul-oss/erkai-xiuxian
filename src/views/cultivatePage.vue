@@ -90,6 +90,10 @@
   }
   const applyCultivateCheat = () => {
     ensureCheats()
+    if (!player.value.cheatsUnlocked) {
+      gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      return
+    }
     const code = normalizeCheatCode(cultivateCheatCode.value)
     let desc = ''
     switch (code) {
@@ -163,6 +167,10 @@
       if (player.value.cultivation <= player.value.maxCultivation) {
         isStop.value = true
         isStart.value = false
+        if (player.value.hellMode && Math.random() < 0.05) {
+          player.value.props.attributePill += 1
+          gameNotifys({ title: '提示', message: '你获得了属性丸' })
+        }
         const exp =
           player.value.level <= 10
             ? Math.floor(player.value.maxCultivation / equip.getRandomInt(10, 30))
@@ -172,11 +180,12 @@
             ? '你开始冥想，吸收周围的灵气。修为提升了！'
             : '你当前的境界已修炼圆满, 需要转生后才能继续修炼'
         )
-        breakThrough(exp)
+          const finalExp = player.value.hellMode ? Math.floor(exp / 2) : exp
+          breakThrough(finalExp)
         // 10%的概率触发随机事件
         if (Math.random() < 0.1) triggerRandomEvent()
       } else {
-        breakThrough(100)
+        breakThrough(player.value.hellMode ? 50 : 100)
       }
     }, time)
     timerIds.value.push(timerId)
@@ -197,11 +206,11 @@
         player.value.props.money += event.amount
         break
       case 'cultivation':
-        player.value.cultivation += event.amount
+        player.value.cultivation += Math.floor(event.amount * (player.value.hellMode ? 0.5 : 1))
         break
       // 增加修为
       case 'item':
-        player.value.cultivation += player.value.cultivation * 0.05
+        player.value.cultivation += player.value.cultivation * (player.value.hellMode ? 0.025 : 0.05)
         break
       // 减少修为
       case 'lucky':
@@ -227,7 +236,8 @@
     const reincarnation = player.value.reincarnation ? player.value.reincarnation + 1 : 1
     if (player.value.level < maxLv) {
       if (player.value.cultivation >= player.value.maxCultivation) {
-        if (player.value.level > 10 && player.value.level > player.value.taskNum) {
+        const requireExplore = !player.value.hellMode || player.value.level > 100
+        if (requireExplore && player.value.level > 10 && player.value.level > player.value.taskNum) {
           stopCultivate()
           isStop.value = false
           isStart.value = false

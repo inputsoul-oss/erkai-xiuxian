@@ -90,6 +90,10 @@
   }
   const applyGameCheat = () => {
     ensureCheats()
+    if (!player.value.cheatsUnlocked) {
+      gameNotifys({ title: '提示', message: '请先在主页输入 Iamuseless 解锁作弊码' })
+      return
+    }
     const code = normalizeCheatCode(gameCheatCode.value)
     const cheats = player.value.cheats.games
     let desc = ''
