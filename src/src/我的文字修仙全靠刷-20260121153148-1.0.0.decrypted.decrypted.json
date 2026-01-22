@@ -1,0 +1,273 @@
+{
+  "boss": {
+    "name": "",
+    "text": "",
+    "time": 0,
+    "desc": "",
+    "level": 0,
+    "dodge": 0,
+    "attack": 0,
+    "health": 0,
+    "conquer": false,
+    "defense": 0,
+    "critical": 0,
+    "maxhealth": 0
+  },
+  "player": {
+    "zc": false,
+    "age": 4,
+    "pet": {},
+    "time": 1768980675082,
+    "name": "爹",
+    "dark": false,
+    "npcs": [
+      {
+        "lv": 144,
+        "name": "云渺仙子",
+        "position": 1973,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "琉光幽姬",
+        "position": 1831,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "烟霞仙子",
+        "position": 1001,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "清韵灵姬",
+        "position": 789,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "碧落灵仙",
+        "position": 1122,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "绮霞灵女",
+        "position": 2375,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "瑶光雪姬",
+        "position": 309,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "琉璃雪姬",
+        "position": 2419,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "幽篁雪姬",
+        "position": 1401,
+        "favorability": 0,
+        "reincarnation": 10
+      },
+      {
+        "lv": 144,
+        "name": "雪舞灵姬",
+        "position": 685,
+        "favorability": 0,
+        "reincarnation": 10
+      }
+    ],
+    "wife": {},
+    "pets": [],
+    "wifes": [],
+    "props": {
+      "money": 4000100,
+      "flying": 0,
+      "qingyuan": 0,
+      "rootBone": 0,
+      "currency": 0,
+      "cultivateDan": 0,
+      "strengtheningStone": 0
+    },
+    "score": 1354179,
+    "level": 143,
+    "dodge": 0.048279197317761396,
+    "points": 3000000,
+    "attack": 500012.1,
+    "health": 371260012,
+    "critical": 0.08540224219561526,
+    "defense": 472510,
+    "taskNum": 0,
+    "version": 0.8,
+    "currency": 0,
+    "maxHealth": 3712600,
+    "inventory": [],
+    "isNewbie": true,
+    "shopData": [],
+    "equipment": {
+      "sutra": {
+        "id": 1768980514643,
+        "name": "烈焰焚天炉",
+        "type": "sutra",
+        "lock": false,
+        "level": 10,
+        "score": 494247,
+        "dodge": 0.03362322682675566,
+        "attack": 139500,
+        "health": 1498500,
+        "defense": 225000,
+        "critical": 0.04033113830780476,
+        "initial": {
+          "dodge": 0.03362322682675566,
+          "attack": 3100,
+          "health": 33300,
+          "defense": 5000,
+          "critical": 0.04033113830780476
+        },
+        "quality": "danger",
+        "strengthen": 20
+      },
+      "armor": {
+        "id": 1768980514432,
+        "name": "赤焰龙鳞宝衣",
+        "type": "armor",
+        "lock": false,
+        "level": 10,
+        "score": 180675,
+        "dodge": 0,
+        "attack": 0,
+        "health": 787500,
+        "defense": 144000,
+        "critical": 0,
+        "initial": {
+          "dodge": 0,
+          "attack": 0,
+          "health": 17500,
+          "defense": 3200,
+          "critical": 0
+        },
+        "quality": "danger",
+        "strengthen": 20
+      },
+      "weapon": {
+        "id": 1768980514332,
+        "name": "赤焰凤凰剑",
+        "type": "weapon",
+        "lock": false,
+        "level": 10,
+        "score": 403503,
+        "dodge": 0,
+        "attack": 269000,
+        "health": 0,
+        "defense": 0,
+        "critical": 0.016780995915315452,
+        "initial": {
+          "dodge": 0,
+          "attack": 5000,
+          "health": 0,
+          "defense": 0,
+          "critical": 0.016780995915315452
+        },
+        "quality": "danger",
+        "strengthen": 24
+      },
+      "accessory": {
+        "id": 1768980514533,
+        "name": "朱雀之翼耳环",
+        "type": "accessory",
+        "lock": false,
+        "level": 10,
+        "score": 273472,
+        "dodge": 0.014655970491005733,
+        "attack": 90000,
+        "health": 1426500,
+        "defense": 103500,
+        "critical": 0.028290107972495038,
+        "initial": {
+          "dodge": 0.014655970491005733,
+          "attack": 2000,
+          "health": 31700,
+          "defense": 2300,
+          "critical": 0.028290107972495038
+        },
+        "quality": "danger",
+        "strengthen": 20
+      }
+    },
+    "achievement": {
+      "pet": [],
+      "monster": [],
+      "equipment": []
+    },
+    "script": "",
+    "cultivation": 204800,
+    "currentTitle": null,
+    "reincarnation": 0,
+    "maxCultivation": 204800,
+    "backpackCapacity": 32000,
+    "sellingEquipmentData": [],
+    "highestTowerFloor": 1,
+    "rewardedTowerFloors": [],
+    "autoExplore": {
+      "enabled": true,
+      "target": 11,
+      "defeated": 0,
+      "autoStartCultivate": false,
+      "exploreCount": 0
+    },
+    "nextGameTimes": {
+      "rps": null,
+      "dice": null,
+      "fortune": null,
+      "secretrealm": 0,
+      "gamblingStone": null
+    },
+    "gameWins": 0,
+    "gameLosses": 0,
+    "checkinDays": 0,
+    "checkinStreak": 0,
+    "lastCheckinDate": null,
+    "fortuneTellingDate": null,
+    "checkedInToday": false,
+    "cheats": {
+      "resources": {},
+      "battle": {
+        "godMode": false,
+        "oneHit": false,
+        "crit100": false,
+        "dodge100": false
+      },
+      "explore": {
+        "forceEncounter": false,
+        "forceNoEncounter": false,
+        "forceTopDrop": false
+      },
+      "growth": {},
+      "backpack": {},
+      "pet": {},
+      "boss": {
+        "autoWin": false,
+        "infiniteTimes": false
+      },
+      "games": {
+        "alwaysWin": false,
+        "checkinMakeup": false
+      }
+    }
+  }
+}
