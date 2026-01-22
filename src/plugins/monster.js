@@ -27,33 +27,38 @@ const monsters = {
       return names_d[Math.floor(Math.random() * names_c.length)]
     }
   },
-  monster_Attack(lv) {
-    if (lv <= 144) {
-      return this.getRandomInt(50, 150) * lv
-    } else {
-      return this.getRandomInt(10000, 50000) * lv
-    }
+  monster_Attack(lv, player) {
+    const base = lv <= 144 ? this.getRandomInt(50, 150) * lv : this.getRandomInt(10000, 50000) * lv
+    return this.adjustByPlayer(base, player?.attack, 0.8, 2.2)
   },
-  monster_Health(lv) {
-    if (lv <= 144) {
-      return this.getRandomInt(100, 500) * lv
-    } else {
-      return this.getRandomInt(10000, 50000) * lv
-    }
+  monster_Health(lv, player) {
+    const base = lv <= 144 ? this.getRandomInt(100, 500) * lv : this.getRandomInt(10000, 50000) * lv
+    const attackScale = player?.attack ? player.attack * 8 : 0
+    const target = Math.max(player?.maxHealth || player?.health || 0, attackScale)
+    return this.adjustByPlayer(base, target, 2.0, 8.0)
   },
-  monster_Defense(lv) {
-    if (lv <= 144) {
-      return this.getRandomInt(1, 15) * lv
-    } else {
-      return this.getRandomInt(500, 1000) * lv
-    }
+  monster_Defense(lv, player) {
+    const base = lv <= 144 ? this.getRandomInt(1, 15) * lv : this.getRandomInt(500, 1000) * lv
+    return this.adjustByPlayer(base, player?.defense, 0.8, 2.0)
   },
-  monster_Criticalhitrate(lv) {
-    if (lv <= 144) {
-      return this.getRandomFloatInRange(0.001, 0.01)
-    } else {
-      return this.getRandomFloatInRange(0.1, 0.75)
-    }
+  monster_Criticalhitrate(lv, player) {
+    const base = lv <= 144 ? this.getRandomFloatInRange(0.001, 0.01) : this.getRandomFloatInRange(0.1, 0.75)
+    return this.adjustRateByPlayer(base, player?.critical)
+  },
+  monster_DodgeRate(lv, player) {
+    const base = lv <= 144 ? this.getRandomFloatInRange(0.001, 0.01) : this.getRandomFloatInRange(0.1, 0.75)
+    return this.adjustRateByPlayer(base, player?.dodge)
+  },
+  adjustByPlayer(base, playerValue, minMultiplier = 0.7, maxMultiplier = 1.3) {
+    if (!playerValue || !base) return base
+    const ratio = playerValue / base
+    const clamped = Math.min(maxMultiplier, Math.max(minMultiplier, ratio))
+    return Math.max(1, Math.floor(base * clamped))
+  },
+  adjustRateByPlayer(base, playerValue) {
+    if (typeof playerValue !== 'number') return base
+    const mixed = base + (playerValue - base) * 0.3
+    return Math.min(0.9, Math.max(0.001, mixed))
   },
   getRandomInt(min, max) {
     min = Math.ceil(min)

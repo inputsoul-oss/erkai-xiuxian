@@ -98,6 +98,7 @@
   import { ElMessageBox } from 'element-plus'
   import monsterData from '@/plugins/monster'
   import { generateBattleDecision } from '@/plugins/zhipuClient'
+  import { applyAiDifficulty } from '@/plugins/aiDifficulty'
 
   const store = useMainStore()
   const router = useRouter()
@@ -160,6 +161,30 @@
       }
     }
   }
+  const ensureAiDifficulty = () => {
+    if (!player.value.aiDifficulty) {
+      player.value.aiDifficulty = {
+        enabled: false,
+        baseUrl: '',
+        apiKey: '',
+        model: '',
+        applyTo: { explore: true, boss: true, endless: true }
+      }
+    }
+  }
+  const applyAiDifficultyToMonster = async baseMonster => {
+    try {
+      ensureAiDifficulty()
+      return await applyAiDifficulty({
+        player: player.value,
+        monster: baseMonster,
+        mode: 'explore',
+        config: player.value.aiDifficulty
+      })
+    } catch (error) {
+      return baseMonster
+    }
+  }
   const applyBattleCheat = () => {
     ensureCheats()
     const code = normalizeCheatCode(battleCheatCode.value)
@@ -193,7 +218,7 @@
     player.value.cultivation >= player.value.maxCultivation &&
     player.value.taskNum < player.value.level
   const remainingBreakthroughKills = () => (needsBreakthroughKills() ? Math.max(0, player.value.level - player.value.taskNum) : 0)
-  const prepareNextBattleForAi = () => {
+  const prepareNextBattleForAi = async () => {
     guashaRounds.value = 10
     isFailedRetreat.value = false
     isCaptureFailed.value = false
@@ -203,14 +228,15 @@
     const monsterLv = level * player.value.reincarnation + level
     const nextMonster = {
       name: monsterData.monster_Names(monsterLv),
-      health: monsterData.monster_Health(monsterLv),
-      attack: monsterData.monster_Attack(monsterLv),
-      defense: monsterData.monster_Defense(monsterLv),
-      dodge: monsterData.monster_Criticalhitrate(monsterLv),
-      critical: monsterData.monster_Criticalhitrate(monsterLv)
+      health: monsterData.monster_Health(monsterLv, player.value),
+      attack: monsterData.monster_Attack(monsterLv, player.value),
+      defense: monsterData.monster_Defense(monsterLv, player.value),
+      dodge: monsterData.monster_DodgeRate(monsterLv, player.value),
+      critical: monsterData.monster_Criticalhitrate(monsterLv, player.value)
     }
-    monster.value = nextMonster
-    store.monster = nextMonster
+    const adjustedMonster = await applyAiDifficultyToMonster(nextMonster)
+    monster.value = adjustedMonster
+    store.monster = adjustedMonster
   }
   const isAutoExploreEnabled = () => player.value.autoExplore?.enabled && player.value.autoExplore?.target > 0
   const incrementAutoExploreDefeated = () => {
@@ -235,18 +261,17 @@
     player.value.props.strengtheningStone += strengtheningStoneTotal
     player.value.inventory = inventory.filter(item => !predicate(item))
   }
-  const autoDismantleNonImmortal = () => {
-    autoDismantleInventory(item => item.quality !== 'pink' && !item.lock)
-  }
-  const autoDismantleAll = () => {
-    autoDismantleInventory(() => true)
+  const autoDismantleBySettings = () => {
+    const settings = player.value.sellingEquipmentData || []
+    if (!settings.length) return
+    autoDismantleInventory(item => settings.includes(item.quality) && !item.lock)
   }
   const handleExploreCompletion = () => {
     ensureAutoExploreState()
-    autoDismantleNonImmortal()
+    autoDismantleBySettings()
     player.value.autoExplore.exploreCount += 1
     if (player.value.autoExplore.exploreCount % 10 === 0 && player.value.inventory.length >= player.value.backpackCapacity) {
-      autoDismantleAll()
+      autoDismantleBySettings()
     }
   }
 
@@ -323,7 +348,7 @@
   }
 
   // 开始攻击
-  const startFight = () => {
+  const startFight = async () => {
     if (isAiAssist.value) return
     if (isEnd.value) return
     isEnd.value = true
@@ -425,11 +450,11 @@
           router.push('/map')
           return
         }
-        if (isAiAssist.value && remainingBreakthroughKills() > 0 && player.value.health > 0) {
-          prepareNextBattleForAi()
-        } else {
-          stopFight()
-        }
+          if (isAiAssist.value && remainingBreakthroughKills() > 0 && player.value.health > 0) {
+            prepareNextBattleForAi()
+          } else {
+            stopFight()
+          }
       } else if (player.value.health <= 0) {
         texts.value.push('你因为太弱被击败了。')
         stopFight()
@@ -760,10 +785,16 @@
     window.removeEventListener('keydown', operate)
   })
 
-  onMounted(() => {
+  onMounted(async () => {
     ensureAutoExploreState()
     ensureCheats()
-    if (monster.value.name) loading.value = false
+    ensureAiDifficulty()
+    if (monster.value.name) {
+      const adjustedMonster = await applyAiDifficultyToMonster(monster.value)
+      monster.value = adjustedMonster
+      store.monster = adjustedMonster
+      loading.value = false
+    }
     // 添加键盘监听
     window.addEventListener('keydown', operate)
     if (isAutoExploreEnabled()) {

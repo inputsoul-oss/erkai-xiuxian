@@ -48,7 +48,7 @@ export const useMainStore = defineStore('main', {
       critical: 0,
       defense: 10,
       taskNum: 0,
-      version: 0.8,
+      version: 1.1,
       currency: 0,
       maxHealth: 100,
       inventory: [],
@@ -104,6 +104,18 @@ export const useMainStore = defineStore('main', {
         games: {
           alwaysWin: false,
           checkinMakeup: false
+        }
+      },
+      aiDifficulty: {
+        enabled: false,
+        baseUrl: '',
+        apiKey: '',
+        model: '',
+        profile: null,
+        applyTo: {
+          explore: true,
+          boss: true,
+          endless: true
         }
       },
       nextGameTimes: {

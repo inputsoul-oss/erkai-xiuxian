@@ -723,20 +723,20 @@
       // 怪物难度根据玩家最高境界 + 转生次数
       const monsterLv = level * player.value.reincarnation + level
       // 添加怪物数据
-      store.monster = {
-        // 名称
-        name: monster.monster_Names(monsterLv),
-        // 气血
-        health: monster.monster_Health(monsterLv),
-        // 攻击
-        attack: monster.monster_Attack(monsterLv),
-        // 防御
-        defense: monster.monster_Defense(monsterLv),
-        // 闪避率
-        dodge: monster.monster_Criticalhitrate(monsterLv),
-        // 暴击
-        critical: monster.monster_Criticalhitrate(monsterLv)
-      }
+        store.monster = {
+          // 名称
+          name: monster.monster_Names(monsterLv),
+          // 气血
+          health: monster.monster_Health(monsterLv, player.value),
+          // 攻击
+          attack: monster.monster_Attack(monsterLv, player.value),
+          // 防御
+          defense: monster.monster_Defense(monsterLv, player.value),
+          // 闪避率
+          dodge: monster.monster_DodgeRate(monsterLv, player.value),
+          // 暴击
+          critical: monster.monster_Criticalhitrate(monsterLv, player.value)
+        }
       // 跳转对战
       router.push('/explore')
     }

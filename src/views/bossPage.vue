@@ -37,6 +37,7 @@
   import { useMainStore } from '@/plugins/store'
   import { ElMessageBox } from 'element-plus'
   import { maxLv, levelNames, formatNumberToChineseUnit, genre, levels, smoothScrollToBottom, gameNotifys } from '@/plugins/game'
+  import { applyAiDifficulty } from '@/plugins/aiDifficulty'
 
   const router = useRouter()
   const store = useMainStore()
@@ -71,6 +72,30 @@
         boss: { autoWin: false, infiniteTimes: false },
         games: { alwaysWin: false, checkinMakeup: false }
       }
+    }
+  }
+  const ensureAiDifficulty = () => {
+    if (!player.value.aiDifficulty) {
+      player.value.aiDifficulty = {
+        enabled: false,
+        baseUrl: '',
+        apiKey: '',
+        model: '',
+        applyTo: { explore: true, boss: true, endless: true }
+      }
+    }
+  }
+  const applyAiDifficultyToBoss = async baseBoss => {
+    try {
+      ensureAiDifficulty()
+      return await applyAiDifficulty({
+        player: player.value,
+        monster: baseBoss,
+        mode: 'boss',
+        config: player.value.aiDifficulty
+      })
+    } catch (error) {
+      return baseBoss
     }
   }
   const applyBossCheat = () => {
@@ -297,8 +322,9 @@
   }
 
   // 世界BOSS
-  const assaultBoss = () => {
+  const assaultBoss = async () => {
     ensureCheats()
+    ensureAiDifficulty()
     const bossCheats = player.value.cheats.boss
     // boss生成的时间
     const time = getMinuteDifference(store.boss.time)
@@ -309,13 +335,13 @@
       // 如果boss还有血量，允许玩家挑战
       if (time >= 5) {
         // boss没有血量但时间大于等于5分钟，重新生成boss
-        store.boss = boss.drawPrize(bossLv)
+        store.boss = await applyAiDifficultyToBoss(boss.drawPrize(bossLv))
       }
       // 如果boss没有血量
     } else {
       if (bossCheats.infiniteTimes || time >= 5 || store.boss.time == 0) {
         // boss没有血量但时间大于等于5分钟，重新生成boss
-        store.boss = boss.drawPrize(bossLv)
+        store.boss = await applyAiDifficultyToBoss(boss.drawPrize(bossLv))
       } else {
         isEnd.value = true
         texts.value.push('BOSS还未刷新，请等待5分钟后再次挑战')
@@ -337,8 +363,8 @@
     return timeDifferenceInMinutes
   }
 
-  onMounted(() => {
-    assaultBoss()
+  onMounted(async () => {
+    await assaultBoss()
   })
 
   onUnmounted(() => {

@@ -502,12 +502,15 @@
             />
             <el-button type="primary" @click="applyEnhanceCheatCode">激活</el-button>
           </div>
-          <div class="enhance-cheat-params" v-if="enhanceCheatEnabled">
-            <span class="enhance-cheat-label">炼器石消耗降低%</span>
-            <el-input-number v-model="enhanceCheatStoneDiscount" :min="0" :max="100" controls-position="right" />
-            <span class="enhance-cheat-label">属性提升%</span>
-            <el-input-number v-model="enhanceCheatAttrBoost" :min="0" :max="1000" controls-position="right" />
-          </div>
+            <div class="enhance-cheat-params" v-if="enhanceCheatEnabled">
+              <span class="enhance-cheat-label">炼器石消耗降低%</span>
+              <el-input-number v-model="enhanceCheatStoneDiscount" :min="0" :max="100" controls-position="right" />
+              <span class="enhance-cheat-label">属性提升%</span>
+              <el-input-number v-model="enhanceCheatAttrBoost" :min="0" :max="99999" controls-position="right" />
+              <span class="enhance-cheat-label">目标炼器等级</span>
+              <el-input-number v-model="enhanceCheatTargetLevel" :min="0" :max="30" controls-position="right" />
+              <el-button type="warning" @click="autoEnhanceToLevel(strengthenInfo)">自动炼器</el-button>
+            </div>
           <el-popover
             trigger="hover"
             :width="350"
@@ -1006,9 +1009,38 @@
         <el-divider>其他相关</el-divider>
         <el-button class="dialog-footer-button" @click="sellingEquipmentBox">批量处理</el-button>
         <el-button class="dialog-footer-button" @click="showCheatHints">作弊码提示</el-button>
+        <el-button class="dialog-footer-button" @click="openAiDifficultySettings">AI难度设置</el-button>
         <el-button type="primary" class="dialog-footer-button" @click="copyContent('qq')">官方群聊</el-button>
         <el-button type="success" class="dialog-footer-button" @click="copyContent('url')">开源地址</el-button>
         <el-divider>当前版本为: {{ ver }}</el-divider>
+      </div>
+    </el-dialog>
+    <el-dialog v-model="aiDifficultyShow" :lock-scroll="false" title="AI难度设置" width="420px">
+      <el-form label-width="120px">
+        <el-form-item label="启用AI难度">
+          <el-switch v-model="aiDifficultyForm.enabled" />
+        </el-form-item>
+        <el-form-item label="接口地址">
+          <el-input v-model="aiDifficultyForm.baseUrl" placeholder="https://api.example.com/v1/chat/completions" />
+        </el-form-item>
+        <el-form-item label="API Key">
+          <el-input v-model="aiDifficultyForm.apiKey" placeholder="Bearer Token" show-password />
+        </el-form-item>
+        <el-form-item label="模型">
+          <el-input v-model="aiDifficultyForm.model" placeholder="模型名称，如 glm-4" />
+        </el-form-item>
+        <el-form-item label="应用模式">
+          <el-checkbox v-model="aiDifficultyForm.applyTo.explore">探索秘境</el-checkbox>
+          <el-checkbox v-model="aiDifficultyForm.applyTo.boss">世界BOSS</el-checkbox>
+          <el-checkbox v-model="aiDifficultyForm.applyTo.endless">无尽模式</el-checkbox>
+        </el-form-item>
+      </el-form>
+      <div class="dialog-footer">
+        <el-button class="dialog-footer-button" @click="aiDifficultyShow = false">取消</el-button>
+        <el-button class="dialog-footer-button" :loading="aiDifficultyTesting" @click="testAiDifficultySettings">
+          测试连接
+        </el-button>
+        <el-button type="primary" class="dialog-footer-button" @click="saveAiDifficultySettings">保存</el-button>
       </div>
     </el-dialog>
     <el-drawer title="图鉴与成就" v-model="equipAllShow" direction="rtl" class="equipAll">
@@ -1135,7 +1167,7 @@
 </template>
 <script setup>
   import { useRouter } from 'vue-router'
-  import { ref, computed, watch, onMounted } from 'vue'
+  import { ref, reactive, computed, watch, onMounted } from 'vue'
   // 标签组件
   import tag from '@/components/tag.vue'
   // 商店
@@ -1150,6 +1182,7 @@
   import achievement from '@/plugins/achievement'
   import equipTooltip from '@/components/equipTooltip.vue'
   import { ElMessageBox } from 'element-plus'
+  import { testAiDifficulty, generateAiDifficultyProfile } from '@/plugins/aiDifficulty'
   import { useMainStore } from '@/plugins/store'
   import {
     maxLv,
@@ -1187,9 +1220,23 @@
   const increase = ref(false)
   const enhanceCheatCode = ref('')
   const enhanceCheatEnabled = ref(false)
-  const enhanceCheatStoneDiscount = ref(0)
-  const enhanceCheatAttrBoost = ref(0)
-  const homeCheatCode = ref('')
+    const enhanceCheatStoneDiscount = ref(0)
+    const enhanceCheatAttrBoost = ref(0)
+    const enhanceCheatTargetLevel = ref(30)
+    const homeCheatCode = ref('')
+    const aiDifficultyShow = ref(false)
+    const aiDifficultyTesting = ref(false)
+    const aiDifficultyForm = reactive({
+      enabled: false,
+      baseUrl: '',
+      apiKey: '',
+      model: '',
+      applyTo: {
+        explore: true,
+        boss: true,
+        endless: true
+      }
+    })
   const normalizeCheatCode = code => code.replace(/[\s\u200B-\u200D\uFEFF]/g, '')
   const homeCheatOptions = [
     'Seven-Money',
@@ -1296,6 +1343,91 @@
     }
     gameNotifys({ title: '提示', message: `作弊码生效：${desc}` })
   }
+  const ensureAiDifficulty = () => {
+    if (!player.value.aiDifficulty) {
+      player.value.aiDifficulty = {
+        enabled: false,
+        baseUrl: '',
+        apiKey: '',
+        model: '',
+        applyTo: {
+          explore: true,
+          boss: true,
+          endless: true
+        }
+      }
+    }
+  }
+  const openAiDifficultySettings = () => {
+    ensureAiDifficulty()
+    const current = player.value.aiDifficulty
+    aiDifficultyForm.enabled = !!current.enabled
+    aiDifficultyForm.baseUrl = current.baseUrl || ''
+    aiDifficultyForm.apiKey = current.apiKey || ''
+    aiDifficultyForm.model = current.model || ''
+    aiDifficultyForm.applyTo.explore = current.applyTo?.explore !== false
+    aiDifficultyForm.applyTo.boss = current.applyTo?.boss !== false
+    aiDifficultyForm.applyTo.endless = current.applyTo?.endless !== false
+    aiDifficultyShow.value = true
+  }
+  const saveAiDifficultySettings = () => {
+    ensureAiDifficulty()
+    player.value.aiDifficulty = {
+      enabled: !!aiDifficultyForm.enabled,
+      baseUrl: aiDifficultyForm.baseUrl?.trim() || '',
+      apiKey: aiDifficultyForm.apiKey?.trim() || '',
+      model: aiDifficultyForm.model?.trim() || '',
+      profile: player.value.aiDifficulty?.profile || null,
+      applyTo: {
+        explore: !!aiDifficultyForm.applyTo.explore,
+        boss: !!aiDifficultyForm.applyTo.boss,
+        endless: !!aiDifficultyForm.applyTo.endless
+      }
+    }
+    aiDifficultyShow.value = false
+    gameNotifys({ title: '提示', message: 'AI难度设置已保存' })
+    if (player.value.aiDifficulty.enabled) {
+      buildAiDifficultyProfile()
+    }
+  }
+  const testAiDifficultySettings = async () => {
+    ensureAiDifficulty()
+    aiDifficultyTesting.value = true
+    const config = {
+      baseUrl: aiDifficultyForm.baseUrl?.trim() || '',
+      apiKey: aiDifficultyForm.apiKey?.trim() || '',
+      model: aiDifficultyForm.model?.trim() || ''
+    }
+    const result = await testAiDifficulty(config)
+    gameNotifys({ title: '提示', message: result.ok ? 'AI连接成功' : `AI连接失败：${result.message}` })
+    aiDifficultyTesting.value = false
+  }
+  const buildAiDifficultyProfile = async () => {
+    ensureAiDifficulty()
+    const config = {
+      baseUrl: aiDifficultyForm.baseUrl?.trim() || '',
+      apiKey: aiDifficultyForm.apiKey?.trim() || '',
+      model: aiDifficultyForm.model?.trim() || ''
+    }
+    const result = await generateAiDifficultyProfile(config, player.value)
+    if (result.ok) {
+      player.value.aiDifficulty.profile = result.profile
+      const multipliers = result.profile?.multipliers || {}
+      const variance = result.profile?.variance || {}
+      const fmt = val => `${Math.round((val || 1) * 100)}%`
+      const fmtVar = val => `${Math.round((val || 0) * 100)}%`
+      gameNotifys({
+        title: '提示',
+        message: `${result.message}（生命${fmt(multipliers.health)}±${fmtVar(variance.health)} 攻击${fmt(
+          multipliers.attack
+        )}±${fmtVar(variance.attack)} 防御${fmt(multipliers.defense)}±${fmtVar(variance.defense)} 闪避${fmt(
+          multipliers.dodge
+        )}±${fmtVar(variance.dodge)} 暴击${fmt(multipliers.critical)}±${fmtVar(variance.critical)}）`
+      })
+    } else {
+      gameNotifys({ title: '提示', message: `AI难度生成失败：${result.message}` })
+    }
+  }
   const showCheatHints = () => {
     ElMessageBox.prompt('输入 Seven 查看全部作弊码', '作弊码提示', {
       confirmButtonText: '确定',
@@ -1398,6 +1530,7 @@
   })
 
   onMounted(() => {
+    ensureAiDifficulty()
     achievementAll.value = achievement.all()
     illustrationsItems.value = equipAll.drawPrize(maxLv)
     startGame()
@@ -1880,12 +2013,51 @@
   }
 
   // 炼器
+  const applyEnhanceSuccess = (item, attrBoost) => {
+    // 攻击
+    const attack = Math.floor(item.initial.attack * 0.2 * attrBoost)
+    // 血量
+    const health = Math.floor(item.initial.health * 0.2 * attrBoost)
+    // 防御
+    const defense = Math.floor(item.initial.defense * 0.2 * attrBoost)
+    switch (item.type) {
+      // 如果是神兵
+      case 'weapon':
+        item.attack += attack
+        playerAttribute(0, attack, 0, 0, 0)
+        break
+      // 如果是防具
+      case 'armor':
+        item.health += health
+        item.defense += defense
+        playerAttribute(0, 0, health, 0, defense)
+        break
+      // 如果是灵宝或法器
+      case 'accessory':
+      case 'sutra':
+        item.attack += attack
+        item.health += health
+        item.defense += defense
+        playerAttribute(0, attack, health, 0, defense)
+        break
+      default:
+        break
+    }
+    // 增加炼器等级
+    item.strengthen++
+    // 重新计算装备评分
+    item.score = equip.calculateEquipmentScore(item.dodge, item.attack, item.health, item.critical, item.defense)
+  }
+  const getEnhanceAttrBoost = () => {
+    const boost = Math.min(99999, Math.max(0, enhanceCheatAttrBoost.value))
+    return enhanceCheatEnabled.value ? 1 + boost / 100 : 1
+  }
   const enhance = item => {
     // 炼器成功率
     const successRate = calculateEnhanceSuccessRate(item)
     // 炼器消耗道具数量
     const calculateCost = calcEnhanceCost(item)
-    const attrBoost = enhanceCheatEnabled.value ? 1 + enhanceCheatAttrBoost.value / 100 : 1
+    const attrBoost = getEnhanceAttrBoost()
     // 如果炼器石不足
     if (calculateCost > player.value.props.strengtheningStone) {
       // 发送通知
@@ -1919,44 +2091,12 @@
     )
       .then(() => {
         // 如果炼器成功
-        if (Math.random() <= successRate) {
-          // 攻击
-          const attack = Math.floor(item.initial.attack * 0.2 * attrBoost)
-          // 血量
-          const health = Math.floor(item.initial.health * 0.2 * attrBoost)
-          // 防御
-          const defense = Math.floor(item.initial.defense * 0.2 * attrBoost)
-          switch (item.type) {
-            // 如果是神兵
-            case 'weapon':
-              item.attack += attack
-              playerAttribute(0, attack, 0, 0, 0)
-              break
-            // 如果是防具
-            case 'armor':
-              item.health += health
-              item.defense += defense
-              playerAttribute(0, 0, health, 0, defense)
-              break
-            // 如果是灵宝或法器
-            case 'accessory':
-            case 'sutra':
-              item.attack += attack
-              item.health += health
-              item.defense += defense
-              playerAttribute(0, attack, health, 0, defense)
-              break
-            default:
-              break
-          }
-          // 增加炼器等级
-          item.strengthen++
-          // 重新计算装备评分
-          item.score = equip.calculateEquipmentScore(item.dodge, item.attack, item.health, item.critical, item.defense)
-          // 发送炼器成功通知
-          gameNotifys({
-            title: '炼器提示',
-            message: '炼器成功',
+          if (Math.random() <= successRate) {
+            applyEnhanceSuccess(item, attrBoost)
+            // 发送炼器成功通知
+            gameNotifys({
+              title: '炼器提示',
+              message: '炼器成功',
             position: 'top-left'
           })
         } else {
@@ -1979,11 +2119,38 @@
             type: 'error'
           })
         }
-        // 扣除炼器石
-        player.value.props.strengtheningStone -= calculateCost
-      })
-      .catch(() => {})
-  }
+          // 扣除炼器石
+          player.value.props.strengtheningStone -= calculateCost
+        })
+        .catch(() => {})
+    }
+    const autoEnhanceToLevel = item => {
+      if (!item || !item.name) return
+      if (!enhanceCheatEnabled.value) {
+        gameNotifys({ title: '炼器提示', message: '请先输入作弊码开启自动炼器', position: 'top-left' })
+        return
+      }
+      const target = Math.max(0, Math.min(30, Math.floor(enhanceCheatTargetLevel.value || 0)))
+      if (item.strengthen >= target) {
+        gameNotifys({ title: '炼器提示', message: '当前炼器等级已达到目标', position: 'top-left' })
+        return
+      }
+      const attrBoost = getEnhanceAttrBoost()
+      while (item.strengthen < target && item.strengthen < 30) {
+        const cost = calcEnhanceCost(item)
+        if (cost > player.value.props.strengtheningStone) {
+          gameNotifys({
+            title: '炼器提示',
+            message: '炼器石不足，已停止自动炼器',
+            position: 'top-left'
+          })
+          return
+        }
+        applyEnhanceSuccess(item, attrBoost)
+        player.value.props.strengtheningStone -= cost
+      }
+      gameNotifys({ title: '炼器提示', message: `自动炼器完成，当前等级 +${item.strengthen}`, position: 'top-left' })
+    }
 
   // 计算炼器所需消耗的道具数量
   const calcEnhanceCost = item => {

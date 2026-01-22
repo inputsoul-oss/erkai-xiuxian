@@ -66,6 +66,7 @@
   import equip from '@/plugins/equip'
   // 怪物
   import monsters from '@/plugins/monster'
+  import { applyAiDifficulty } from '@/plugins/aiDifficulty'
   import combatSystem from '@/plugins/combat'
   import { ElMessageBox } from 'element-plus'
   import { checkAchievements } from '@/plugins/achievementChecker'
@@ -99,6 +100,30 @@
         boss: { autoWin: false, infiniteTimes: false },
         games: { alwaysWin: false, checkinMakeup: false }
       }
+    }
+  }
+  const ensureAiDifficulty = () => {
+    if (!player.value.aiDifficulty) {
+      player.value.aiDifficulty = {
+        enabled: false,
+        baseUrl: '',
+        apiKey: '',
+        model: '',
+        applyTo: { explore: true, boss: true, endless: true }
+      }
+    }
+  }
+  const applyAiDifficultyToMonster = async baseMonster => {
+    try {
+      ensureAiDifficulty()
+      return await applyAiDifficulty({
+        player: player.value,
+        monster: baseMonster,
+        mode: 'endless',
+        config: player.value.aiDifficulty
+      })
+    } catch (error) {
+      return baseMonster
     }
   }
   const applyEndlessCheat = () => {
@@ -263,28 +288,28 @@
   }
 
   // 生成当前层的怪物
-  const generateMonster = () => {
+  const generateMonster = async () => {
     // 根据当前层数计算怪物等级
     const level = currentFloor.value * 2
-    const health = monsters.monster_Health(level)
-    monster.value = {
+    const baseMonster = {
       // 名称
       name: monsters.monster_Names(level),
       // 等级
       level,
       // 闪避率
-      dodge: monsters.monster_Criticalhitrate(level),
+      dodge: monsters.monster_DodgeRate(level, player.value),
       // 攻击
-      attack: monsters.monster_Attack(level),
+      attack: monsters.monster_Attack(level, player.value),
       // 气血
-      health: health,
+      health: monsters.monster_Health(level, player.value),
       // 防御
-      defense: monsters.monster_Defense(level),
+      defense: monsters.monster_Defense(level, player.value),
       // 最大气血
-      maxHealth: health,
+      maxHealth: monsters.monster_Health(level, player.value),
       // 暴击率
-      critical: monsters.monster_Criticalhitrate(level)
+      critical: monsters.monster_Criticalhitrate(level, player.value)
     }
+    monster.value = await applyAiDifficultyToMonster(baseMonster)
     // 日志
     battleLogs.value.push(`你遇到了本层的守护者: ${monster.value.name}`)
   }
@@ -651,6 +676,7 @@
 
   onMounted(() => {
     ensureCheats()
+    ensureAiDifficulty()
     //检查成就
     const newAchievements = checkAchievements(player.value, 'monster')
     newAchievements.forEach(achievement => {
